@@ -37,10 +37,6 @@ class SessionManager:
             return False
         return self.engine.seek(lap_number)
 
-    # ------------------------------------------------------------------ #
-    # Internal                                                             #
-    # ------------------------------------------------------------------ #
-
     def _run(self):
         update_state({"mode": "IDLE"})
 

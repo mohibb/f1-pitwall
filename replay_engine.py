@@ -44,10 +44,6 @@ class ReplayEngine:
               f"{len(self.laps)} laps, {len(self.driver_info)} drivers, "
               f"max_time={self._max_time:.0f}s")
 
-    # ------------------------------------------------------------------ #
-    # Public                                                               #
-    # ------------------------------------------------------------------ #
-
     def tick(self) -> None:
         self.simulated_time += self.tick_interval * self.speed
 
@@ -67,10 +63,6 @@ class ReplayEngine:
         print("[replay] Stopped")
 
     def seek(self, lap_number: int) -> bool:
-        """
-        Seek to the start of the given lap number.
-        Returns True if successful, False if lap not found.
-        """
         target_time = None
         for lap in self.laps:
             if lap["lap_number"] == lap_number and lap["lap_start_time"] is not None:
@@ -88,17 +80,12 @@ class ReplayEngine:
         self._applied_laps.clear()
         update_state({"race_control": []})
 
-        # Fast-forward state up to the seek point
         self._process_laps()
         self._process_weather()
         self._process_race_control()
         self._push_state()
 
         return True
-
-    # ------------------------------------------------------------------ #
-    # Internal                                                             #
-    # ------------------------------------------------------------------ #
 
     def _reset(self) -> None:
         print("[replay] End of session — looping back to start")

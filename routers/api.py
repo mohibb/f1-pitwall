@@ -15,7 +15,6 @@ _start_time = time.time()
 _schedule_cache: list[dict] = []
 _schedule_year: int | None = None
 
-# Set by main.py after session_manager is created
 _session_manager = None
 
 def set_session_manager(sm):
