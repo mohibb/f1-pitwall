@@ -10,10 +10,6 @@ def enable_cache(cache_dir: str = "f1_cache") -> None:
 
 
 def get_last_completed_race() -> tuple[int, int] | None:
-    """
-    Walk back through the current season schedule to find the most recently
-    completed race. Returns (year, round_number) or None if not found.
-    """
     now = datetime.now(timezone.utc)
     year = now.year
 
@@ -37,7 +33,6 @@ def get_last_completed_race() -> tuple[int, int] | None:
             continue
 
     if not completed:
-        # Fall back to last race of previous year
         try:
             schedule = fastf1.get_event_schedule(year - 1, include_testing=False)
             for _, event in schedule.iterrows():
@@ -53,10 +48,6 @@ def get_last_completed_race() -> tuple[int, int] | None:
 
 
 def load_session(year: int, round_number: int, session_type: str = "R") -> fastf1.core.Session | None:
-    """
-    Load and return a FastF1 session object with laps, weather, and messages.
-    Telemetry is skipped for performance.
-    """
     try:
         session = fastf1.get_session(year, round_number, session_type)
         session.load(laps=True, telemetry=False, weather=True, messages=True)
@@ -68,10 +59,6 @@ def load_session(year: int, round_number: int, session_type: str = "R") -> fastf
 
 
 def extract_driver_info(session: fastf1.core.Session) -> dict:
-    """
-    Returns a dict keyed by driver abbreviation with static info:
-    team name and team colour.
-    """
     drivers = {}
     for _, row in session.results.iterrows():
         abbr = row["Abbreviation"]
@@ -85,32 +72,37 @@ def extract_driver_info(session: fastf1.core.Session) -> dict:
 def extract_laps(session: fastf1.core.Session) -> list[dict]:
     """
     Returns all laps as a list of dicts sorted by session time.
-    Each dict contains the fields needed to update shared state.
+    Includes all laps — accurate and inaccurate — so the replay
+    has full coverage. Inaccurate laps (e.g. out laps, in laps)
+    are still useful for position and tyre tracking.
     """
     laps = session.laps.copy()
-    laps = laps[laps["IsAccurate"] == True]
+
+    # Drop rows with no session time at all — they can't be replayed
+    laps = laps.dropna(subset=["Time"])
 
     records = []
     for _, lap in laps.iterrows():
         try:
             records.append({
-                "driver":        lap["Driver"],
-                "lap_number":    int(lap["LapNumber"]) if not pd.isna(lap["LapNumber"]) else None,
-                "lap_time":      _fmt_timedelta(lap["LapTime"]),
-                "session_time":  lap["Time"].total_seconds() if not pd.isna(lap["Time"]) else None,
-                "lap_start_time": lap["LapStartTime"].total_seconds() if not pd.isna(lap["LapStartTime"]) else None,
-                "pit_in_time":   lap["PitInTime"].total_seconds() if not pd.isna(lap["PitInTime"]) else None,
-                "pit_out_time":  lap["PitOutTime"].total_seconds() if not pd.isna(lap["PitOutTime"]) else None,
-                "compound":      lap["Compound"] if not pd.isna(lap["Compound"]) else "UNKNOWN",
-                "tyre_life":     int(lap["TyreLife"]) if not pd.isna(lap["TyreLife"]) else 0,
-                "fresh_tyre":    bool(lap["FreshTyre"]) if not pd.isna(lap["FreshTyre"]) else False,
-                "stint":         int(lap["Stint"]) if not pd.isna(lap["Stint"]) else 1,
-                "sector_1":      _fmt_timedelta(lap["Sector1Time"]),
-                "sector_2":      _fmt_timedelta(lap["Sector2Time"]),
-                "sector_3":      _fmt_timedelta(lap["Sector3Time"]),
-                "position":      int(lap["Position"]) if not pd.isna(lap["Position"]) else None,
+                "driver":           lap["Driver"],
+                "lap_number":       int(lap["LapNumber"]) if not pd.isna(lap["LapNumber"]) else None,
+                "lap_time":         _fmt_timedelta(lap["LapTime"]),
+                "session_time":     lap["Time"].total_seconds(),
+                "lap_start_time":   lap["LapStartTime"].total_seconds() if not pd.isna(lap["LapStartTime"]) else None,
+                "pit_in_time":      lap["PitInTime"].total_seconds() if not pd.isna(lap["PitInTime"]) else None,
+                "pit_out_time":     lap["PitOutTime"].total_seconds() if not pd.isna(lap["PitOutTime"]) else None,
+                "compound":         lap["Compound"] if not pd.isna(lap["Compound"]) else "UNKNOWN",
+                "tyre_life":        int(lap["TyreLife"]) if not pd.isna(lap["TyreLife"]) else 0,
+                "fresh_tyre":       bool(lap["FreshTyre"]) if not pd.isna(lap["FreshTyre"]) else False,
+                "stint":            int(lap["Stint"]) if not pd.isna(lap["Stint"]) else 1,
+                "sector_1":         _fmt_timedelta(lap["Sector1Time"]),
+                "sector_2":         _fmt_timedelta(lap["Sector2Time"]),
+                "sector_3":         _fmt_timedelta(lap["Sector3Time"]),
+                "position":         int(lap["Position"]) if not pd.isna(lap["Position"]) else None,
                 "is_personal_best": bool(lap["IsPersonalBest"]) if not pd.isna(lap["IsPersonalBest"]) else False,
-                "track_status":  lap["TrackStatus"] if not pd.isna(lap["TrackStatus"]) else "1",
+                "track_status":     str(lap["TrackStatus"]) if not pd.isna(lap["TrackStatus"]) else "1",
+                "is_accurate":      bool(lap["IsAccurate"]) if not pd.isna(lap["IsAccurate"]) else False,
             })
         except Exception:
             continue
@@ -120,9 +112,6 @@ def extract_laps(session: fastf1.core.Session) -> list[dict]:
 
 
 def extract_weather(session: fastf1.core.Session) -> list[dict]:
-    """
-    Returns weather snapshots as a list of dicts sorted by session time.
-    """
     snapshots = []
     for _, row in session.weather_data.iterrows():
         try:
@@ -140,9 +129,6 @@ def extract_weather(session: fastf1.core.Session) -> list[dict]:
 
 
 def extract_race_control(session: fastf1.core.Session) -> list[dict]:
-    """
-    Returns race control messages as a list of dicts sorted by session time.
-    """
     messages = []
     for _, row in session.race_control_messages.iterrows():
         try:
@@ -158,7 +144,6 @@ def extract_race_control(session: fastf1.core.Session) -> list[dict]:
 
 
 def extract_total_laps(session: fastf1.core.Session) -> int:
-    """Returns the total number of laps in the race."""
     try:
         return int(session.laps["LapNumber"].max())
     except Exception:
@@ -166,7 +151,6 @@ def extract_total_laps(session: fastf1.core.Session) -> int:
 
 
 def _fmt_timedelta(td) -> str | None:
-    """Format a timedelta as M:SS.mmm string, or None if invalid."""
     if pd.isna(td):
         return None
     try:
