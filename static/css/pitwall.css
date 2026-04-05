@@ -950,3 +950,58 @@ body {
 .d-row.flash    { animation: lapFlash 1s ease-out; }
 .d-row.pos-up   { animation: posUp   1s ease-out; }
 .d-row.pos-down { animation: posDown 1s ease-out; }
+
+/* ── Tyre strategy ── */
+.strategy-page {
+    padding-top: 1rem;
+    max-width: 1100px;
+}
+
+.strategy-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.strategy-title {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+}
+
+.strategy-lap {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+
+.strategy-chart-wrap {
+    overflow-x: auto;
+}
+
+.strategy-svg {
+    display: block;
+    overflow: visible;
+}
+
+.strategy-svg .axis-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    fill: var(--muted);
+}
+
+.strategy-svg .driver-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--text);
+}
+
+.strategy-svg .stint-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    pointer-events: none;
+}
