@@ -26,8 +26,55 @@ body {
     color: var(--text);
     font-family: var(--font-ui);
     display: flex;
+    flex-direction: column;
     min-height: 100vh;
 }
+
+/* ── Session strip (top bar) ── */
+.session-strip {
+    position: fixed;
+    top: 0;
+    left: 200px;
+    right: 0;
+    height: 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    gap: 1.5rem;
+    z-index: 100;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+}
+
+.session-strip .circuit { color: var(--text); font-weight: 600; }
+.session-strip .round   { color: var(--muted); }
+.session-strip .session-name { color: var(--muted); }
+.session-strip .clock   { margin-left: auto; color: var(--sc-yellow); }
+.session-strip .lap-counter { color: var(--muted); }
+
+/* ── Track status banner ── */
+.track-status-banner {
+    display: none;
+    position: fixed;
+    top: 40px;
+    left: 200px;
+    right: 0;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    z-index: 99;
+}
+.track-status-banner.visible { display: flex; }
+.track-status-banner.sc   { background: var(--sc-yellow); color: #000; }
+.track-status-banner.vsc  { background: var(--vsc-amber); color: #000; }
+.track-status-banner.red  { background: var(--red-flag);  color: #fff; }
+.track-status-banner.yellow { background: #ffdd00; color: #000; }
 
 /* ── Sidebar ── */
 .sidebar {
@@ -40,6 +87,7 @@ body {
     padding: 1.5rem 1rem;
     position: fixed;
     top: 0; left: 0;
+    z-index: 200;
 }
 
 .sidebar-header {
@@ -65,9 +113,14 @@ body {
     display: inline-block;
     width: fit-content;
 }
-
 .mode-badge.replay { background: #222; color: var(--muted); }
-.mode-badge.live    { background: var(--accent); color: #fff; }
+.mode-badge.live   { background: var(--accent); color: #fff; animation: pulse 1.5s infinite; }
+.mode-badge.idle   { background: #222; color: var(--muted); }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+}
 
 .nav-links {
     list-style: none;
@@ -86,8 +139,7 @@ body {
     border-radius: 4px;
     transition: background 0.15s, color 0.15s;
 }
-
-.nav-links a:hover { background: var(--border); color: var(--text); }
+.nav-links a:hover  { background: var(--border); color: var(--text); }
 .nav-links a.active { background: var(--border); color: var(--text); }
 
 .sidebar-footer {
@@ -123,13 +175,19 @@ body {
 /* ── Main content ── */
 .content {
     margin-left: 200px;
-    padding: 2rem;
+    padding-top: 40px; /* session strip height */
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-bottom: 2rem;
     flex: 1;
+    min-height: 100vh;
 }
 
-.placeholder {
-    color: var(--muted);
+.content.has-status-banner {
+    padding-top: 68px; /* strip + banner */
 }
+
+.placeholder { color: var(--muted); }
 .placeholder h2 { margin-bottom: 0.5rem; color: var(--text); }
 
 /* ── Login ── */
@@ -210,7 +268,7 @@ body {
 .login-form button:hover { opacity: 0.85; }
 
 /* ── Admin ── */
-.admin-panel { max-width: 900px; }
+.admin-panel { max-width: 900px; padding-top: 1.5rem; }
 .admin-panel h2 { margin-bottom: 1.5rem; }
 .admin-section { margin-bottom: 2rem; }
 .admin-section h3 { margin-bottom: 1rem; font-size: 0.95rem; color: var(--muted); }
@@ -289,5 +347,63 @@ body {
     font-size: 0.85rem;
     margin-bottom: 1rem;
 }
-.alert-error { background: rgba(232,0,45,0.1); border: 1px solid var(--accent); color: var(--accent); }
-.alert-success { background: rgba(39,174,96,0.1); border: 1px solid var(--green); color: var(--green); }
+.alert-error   { background: rgba(232,0,45,0.1);  border: 1px solid var(--accent); color: var(--accent); }
+.alert-success { background: rgba(39,174,96,0.1); border: 1px solid var(--green);  color: var(--green); }
+
+/* ── Mobile bottom nav ── */
+.bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 200;
+}
+
+.bottom-nav ul {
+    list-style: none;
+    display: flex;
+    height: 100%;
+}
+
+.bottom-nav li { flex: 1; }
+
+.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.6rem;
+    gap: 2px;
+    transition: color 0.15s;
+}
+.bottom-nav a .nav-icon { font-size: 1.1rem; line-height: 1; }
+.bottom-nav a:hover, .bottom-nav a.active { color: var(--text); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .sidebar { display: none; }
+    .bottom-nav { display: block; }
+
+    .session-strip {
+        left: 0;
+        font-size: 0.7rem;
+        padding: 0 1rem;
+        gap: 0.75rem;
+    }
+
+    .track-status-banner { left: 0; }
+
+    .content {
+        margin-left: 0;
+        padding: 48px 1rem 70px;
+    }
+
+    .content.has-status-banner {
+        padding-top: 76px;
+    }
+}
