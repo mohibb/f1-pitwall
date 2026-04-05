@@ -1175,3 +1175,151 @@ body {
     .rc-columns { grid-template-columns: 1fr; }
     .rc-feed { max-height: 60vh; }
 }
+
+/* ── Schedule ── */
+.schedule-page {
+    padding-top: 1rem;
+    max-width: 800px;
+}
+
+.schedule-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.schedule-title {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+}
+
+.schedule-year {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.sched-empty {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+.sched-event {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.sched-event:hover          { border-color: #444; }
+.sched-event.past           { opacity: 0.45; }
+.sched-event.next           { border-color: var(--accent); }
+
+.sched-event-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+}
+
+.sched-event-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sched-round {
+    font-size: 0.7rem;
+    color: var(--muted);
+    min-width: 28px;
+}
+
+.sched-event-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.sched-event-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.sched-event-location {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.sched-event-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.sched-event-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.sched-countdown {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--sc-yellow);
+}
+
+.sched-next-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+.sched-sessions {
+    border-top: 1px solid var(--border);
+    padding: 0.5rem 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.sched-session-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    padding: 0.2rem 0;
+}
+
+.sched-session-row.past { opacity: 0.5; }
+
+.sched-session-name {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.sched-session-date {
+    font-size: 0.75rem;
+    color: var(--text);
+}
+
+@media (max-width: 768px) {
+    .sched-event-header { flex-wrap: wrap; }
+    .sched-event-right  { width: 100%; justify-content: flex-end; }
+}
