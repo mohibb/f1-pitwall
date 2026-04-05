@@ -1005,3 +1005,173 @@ body {
     font-weight: 600;
     pointer-events: none;
 }
+
+/* ── Race control ── */
+.rc-page {
+    padding-top: 1rem;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+}
+
+.rc-columns {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 2rem;
+    height: 100%;
+}
+
+.rc-feed-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.rc-section-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    margin-bottom: 0.75rem;
+}
+
+.rc-feed {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-right: 0.5rem;
+}
+
+.rc-empty {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+.rc-msg {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.rc-msg.flag-sc     { border-left-color: var(--sc-yellow); }
+.rc-msg.flag-vsc    { border-left-color: var(--vsc-amber); }
+.rc-msg.flag-red    { border-left-color: var(--red-flag);  }
+.rc-msg.flag-yellow { border-left-color: var(--sc-yellow); }
+.rc-msg.flag-green  { border-left-color: var(--green);     }
+
+.rc-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.25rem;
+}
+
+.rc-flag-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 2px;
+    background: var(--border);
+    color: var(--text);
+}
+
+.rc-flag-badge.flag-sc     { background: var(--sc-yellow); color: #000; }
+.rc-flag-badge.flag-vsc    { background: var(--vsc-amber); color: #000; }
+.rc-flag-badge.flag-red    { background: var(--red-flag);  color: #fff; }
+.rc-flag-badge.flag-yellow { background: var(--sc-yellow); color: #000; }
+.rc-flag-badge.flag-green  { background: var(--green);     color: #fff; }
+
+.rc-msg-time { font-size: 0.7rem; color: var(--muted); }
+.rc-msg-lap  { font-size: 0.7rem; color: var(--muted); }
+.rc-msg-text { color: var(--text); line-height: 1.4; }
+
+/* Right column */
+.rc-right-col {
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.rc-weather-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.rc-wx-tile {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.rc-wx-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    width: 60px;
+    letter-spacing: 0.08em;
+}
+
+.rc-wx-value {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+.rc-wx-unit {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+}
+
+/* Track status timeline */
+.rc-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.rc-timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+}
+
+.rc-tl-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 2px;
+    min-width: 52px;
+    text-align: center;
+    background: var(--border);
+    color: var(--text);
+}
+
+.rc-tl-badge.flag-sc     { background: var(--sc-yellow); color: #000; }
+.rc-tl-badge.flag-vsc    { background: var(--vsc-amber); color: #000; }
+.rc-tl-badge.flag-red    { background: var(--red-flag);  color: #fff; }
+.rc-tl-badge.flag-yellow { background: var(--sc-yellow); color: #000; }
+.rc-tl-badge.flag-green  { background: var(--green);     color: #fff; }
+
+.rc-tl-time { color: var(--muted); font-size: 0.75rem; }
+
+/* Mobile: stack columns */
+@media (max-width: 768px) {
+    .rc-page { height: auto; overflow: visible; }
+    .rc-columns { grid-template-columns: 1fr; }
+    .rc-feed { max-height: 60vh; }
+}

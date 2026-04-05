@@ -1,7 +1,155 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="placeholder">
-    <h2>Race Control</h2>
-    <p>Coming in Phase 5.</p>
+<div class="rc-page">
+
+    <div class="rc-columns">
+
+        <!-- Left: message feed -->
+        <div class="rc-feed-col">
+            <div class="rc-section-label">RACE CONTROL MESSAGES</div>
+            <div class="rc-feed" id="rc-feed">
+                <div class="rc-empty">No messages yet</div>
+            </div>
+        </div>
+
+        <!-- Right: weather + track status timeline -->
+        <div class="rc-right-col">
+
+            <div class="rc-section-label">WEATHER</div>
+            <div class="rc-weather-grid">
+                <div class="rc-wx-tile">
+                    <span class="rc-wx-label">AIR</span>
+                    <span class="rc-wx-value" id="rc-wx-air">—</span>
+                    <span class="rc-wx-unit">°C</span>
+                </div>
+                <div class="rc-wx-tile">
+                    <span class="rc-wx-label">TRACK</span>
+                    <span class="rc-wx-value" id="rc-wx-track">—</span>
+                    <span class="rc-wx-unit">°C</span>
+                </div>
+                <div class="rc-wx-tile">
+                    <span class="rc-wx-label">HUMIDITY</span>
+                    <span class="rc-wx-value" id="rc-wx-humidity">—</span>
+                    <span class="rc-wx-unit">%</span>
+                </div>
+                <div class="rc-wx-tile">
+                    <span class="rc-wx-label">WIND</span>
+                    <span class="rc-wx-value" id="rc-wx-wind">—</span>
+                    <span class="rc-wx-unit">m/s</span>
+                </div>
+                <div class="rc-wx-tile">
+                    <span class="rc-wx-label">RAIN</span>
+                    <span class="rc-wx-value" id="rc-wx-rain">—</span>
+                </div>
+            </div>
+
+            <div class="rc-section-label" style="margin-top:1.5rem">TRACK STATUS HISTORY</div>
+            <div class="rc-timeline" id="rc-timeline">
+                <div class="rc-empty">No status changes yet</div>
+            </div>
+
+        </div>
+    </div>
 </div>
+
+<script>
+const FLAG_META = {
+    'GREEN':       { label: 'GREEN',       cls: 'flag-green'  },
+    'YELLOW':      { label: 'YELLOW',      cls: 'flag-yellow' },
+    'DOUBLE YELLOW':{ label: 'DBL YELLOW', cls: 'flag-yellow' },
+    'RED':         { label: 'RED',         cls: 'flag-red'    },
+    'SAFETY CAR':  { label: 'SC',          cls: 'flag-sc'     },
+    'SC':          { label: 'SC',          cls: 'flag-sc'     },
+    'VSC':         { label: 'VSC',         cls: 'flag-vsc'    },
+    'VIRTUAL SAFETY CAR': { label: 'VSC',  cls: 'flag-vsc'    },
+    'CHEQUERED':   { label: '🏁',          cls: 'flag-green'  },
+};
+
+const STATUS_META = {
+    '1': { label: 'GREEN',  cls: 'flag-green'  },
+    '2': { label: 'YELLOW', cls: 'flag-yellow' },
+    '4': { label: 'SC',     cls: 'flag-sc'     },
+    '5': { label: 'RED',    cls: 'flag-red'    },
+    '6': { label: 'VSC',    cls: 'flag-vsc'    },
+    '7': { label: 'VSC END',cls: 'flag-vsc'    },
+};
+
+let _statusHistory = [];
+let _lastStatus    = null;
+let _renderedCount = 0;
+
+document.addEventListener('f1:update', (e) => {
+    const { race_control, weather, track_status, session } = e.detail;
+
+    // Weather
+    if (weather) {
+        setText('rc-wx-air',      weather.air_temp   != null ? weather.air_temp.toFixed(1)   : '—');
+        setText('rc-wx-track',    weather.track_temp != null ? weather.track_temp.toFixed(1) : '—');
+        setText('rc-wx-humidity', weather.humidity   != null ? weather.humidity.toFixed(0)   : '—');
+        setText('rc-wx-wind',     weather.wind_speed != null ? weather.wind_speed.toFixed(1) : '—');
+        setText('rc-wx-rain',     weather.rainfall   ? '🌧 YES' : 'NO');
+    }
+
+    // Track status history
+    if (track_status && track_status !== _lastStatus) {
+        _lastStatus = track_status;
+        const meta = STATUS_META[track_status] || { label: track_status, cls: '' };
+        const simTime = session?.simulated_time || '';
+        _statusHistory.push({ label: meta.label, cls: meta.cls, time: simTime });
+        renderTimeline();
+    }
+
+    // Race control feed — only render new messages
+    if (race_control && race_control.length > _renderedCount) {
+        const feed = document.getElementById('rc-feed');
+        if (_renderedCount === 0) feed.innerHTML = '';
+
+        const newMsgs = race_control.slice(_renderedCount);
+        newMsgs.forEach(msg => {
+            const div = document.createElement('div');
+            const flagKey = (msg.flag || '').toUpperCase();
+            const meta = Object.entries(FLAG_META).find(([k]) => flagKey.includes(k));
+            const flagCls  = meta ? meta[1].cls  : '';
+            const flagLabel = meta ? meta[1].label : '';
+
+            div.className = `rc-msg ${flagCls}`;
+            div.innerHTML = `
+                <div class="rc-msg-header">
+                    ${flagLabel ? `<span class="rc-flag-badge ${flagCls}">${flagLabel}</span>` : ''}
+                    <span class="rc-msg-time mono">${fmtTime(msg.session_time)}</span>
+                    ${msg.lap ? `<span class="rc-msg-lap mono">LAP ${msg.lap}</span>` : ''}
+                </div>
+                <div class="rc-msg-text">${msg.message}</div>
+            `;
+            feed.insertBefore(div, feed.firstChild);
+        });
+
+        _renderedCount = race_control.length;
+    }
+});
+
+function renderTimeline() {
+    const el = document.getElementById('rc-timeline');
+    if (_statusHistory.length === 0) return;
+    el.innerHTML = _statusHistory.slice().reverse().map(s => `
+        <div class="rc-timeline-row">
+            <span class="rc-tl-badge ${s.cls}">${s.label}</span>
+            <span class="rc-tl-time mono">${s.time}</span>
+        </div>
+    `).join('');
+}
+
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+function fmtTime(seconds) {
+    if (!seconds) return '';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+</script>
 {% endblock %}
