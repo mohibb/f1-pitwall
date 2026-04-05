@@ -160,3 +160,41 @@ def _fmt_timedelta(td) -> str | None:
         return f"{minutes}:{seconds:06.3f}"
     except Exception:
         return None
+
+
+def extract_schedule(year: int) -> list[dict]:
+    """
+    Returns the full season schedule for a given year.
+    Each event includes all session names and dates.
+    """
+    try:
+        schedule = fastf1.get_event_schedule(year, include_testing=False)
+    except Exception as e:
+        print(f"[loader] Could not load schedule for {year}: {e}")
+        return []
+
+    events = []
+    for _, event in schedule.iterrows():
+        try:
+            sessions = []
+            for i in range(1, 6):
+                name = event.get(f"Session{i}")
+                date = event.get(f"Session{i}DateUtc")
+                if name and not pd.isna(name) and date and not pd.isna(date):
+                    sessions.append({
+                        "name": str(name),
+                        "date": str(date),
+                    })
+
+            events.append({
+                "round":       int(event["RoundNumber"]),
+                "name":        str(event["EventName"]),
+                "country":     str(event["Country"]),
+                "location":    str(event["Location"]),
+                "date":        str(event["EventDate"]),
+                "sessions":    sessions,
+            })
+        except Exception:
+            continue
+
+    return events
