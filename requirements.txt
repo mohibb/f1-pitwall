@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+fastf1
+pandas
+numpy
+passlib[bcrypt]
+python-jose[cryptography]
+slowapi
+jinja2
+python-multipart
+aiosqlite
+python-dotenv
