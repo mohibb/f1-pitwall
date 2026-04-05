@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Pit Wall</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/pitwall.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <span class="logo">F1 PIT WALL</span>
+            <span class="mode-badge replay">↺ REPLAY</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/overview" class="{{ 'active' if page == 'overview' }}">⬡ Overview</a></li>
+            <li><a href="/dashboard" class="{{ 'active' if page == 'dashboard' }}">≡ Timing</a></li>
+            <li><a href="/strategy" class="{{ 'active' if page == 'strategy' }}">▦ Strategy</a></li>
+            <li><a href="/racecontrol" class="{{ 'active' if page == 'racecontrol' }}">⚑ Race Control</a></li>
+            <li><a href="/schedule" class="{{ 'active' if page == 'schedule' }}">📅 Schedule</a></li>
+            {% if user.is_admin %}
+            <li><a href="/admin/users" class="{{ 'active' if page == 'admin' }}">⚙ Admin</a></li>
+            {% endif %}
+        </ul>
+        <div class="sidebar-footer">
+            <span class="username">{{ user.username }}</span>
+            <form action="/logout" method="post" style="display:inline">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
+    </nav>
+
+    <main class="content">
+        {% block content %}
+        <div class="placeholder">
+            <h2>F1 Pit Wall</h2>
+            <p>Dashboard coming in Phase 5.</p>
+        </div>
+        {% endblock %}
+    </main>
+
+    <script src="/static/js/poll.js"></script>
+</body>
+</html>
