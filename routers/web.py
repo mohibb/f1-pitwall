@@ -4,8 +4,7 @@ from fastapi.templating import Jinja2Templates
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-
-from auth import create_access_token, get_current_user, get_current_user_or_redirect, require_admin
+from auth import create_access_token, get_current_user_or_redirect, require_admin
 from database import (
     change_password,
     create_user,
@@ -68,8 +67,40 @@ async def logout():
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, current_user=Depends(get_current_user_or_redirect)):
     return templates.TemplateResponse(
-        "base.html",
+        "timing.html",
         {"request": request, "user": dict(current_user), "page": "dashboard"},
+    )
+
+
+@router.get("/overview", response_class=HTMLResponse)
+async def overview(request: Request, current_user=Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(
+        "overview.html",
+        {"request": request, "user": dict(current_user), "page": "overview"},
+    )
+
+
+@router.get("/strategy", response_class=HTMLResponse)
+async def strategy(request: Request, current_user=Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(
+        "strategy.html",
+        {"request": request, "user": dict(current_user), "page": "strategy"},
+    )
+
+
+@router.get("/racecontrol", response_class=HTMLResponse)
+async def racecontrol(request: Request, current_user=Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(
+        "racecontrol.html",
+        {"request": request, "user": dict(current_user), "page": "racecontrol"},
+    )
+
+
+@router.get("/schedule", response_class=HTMLResponse)
+async def schedule(request: Request, current_user=Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(
+        "schedule.html",
+        {"request": request, "user": dict(current_user), "page": "schedule"},
     )
 
 
