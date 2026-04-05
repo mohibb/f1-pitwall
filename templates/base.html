@@ -9,17 +9,31 @@
     <link rel="stylesheet" href="/static/css/pitwall.css">
 </head>
 <body>
+
+    <!-- Session strip -->
+    <div class="session-strip" id="session-strip">
+        <span class="circuit" id="strip-circuit">—</span>
+        <span class="round" id="strip-round"></span>
+        <span class="session-name" id="strip-session"></span>
+        <span class="lap-counter" id="strip-lap"></span>
+        <span class="clock" id="strip-clock">00:00:00</span>
+    </div>
+
+    <!-- Track status banner (hidden unless SC/VSC/red flag) -->
+    <div class="track-status-banner" id="track-status-banner"></div>
+
+    <!-- Sidebar (desktop) -->
     <nav class="sidebar">
         <div class="sidebar-header">
             <span class="logo">F1 PIT WALL</span>
-            <span class="mode-badge replay">↺ REPLAY</span>
+            <span class="mode-badge replay" id="mode-badge">↺ REPLAY</span>
         </div>
         <ul class="nav-links">
-            <li><a href="/overview" class="{{ 'active' if page == 'overview' }}">⬡ Overview</a></li>
-            <li><a href="/dashboard" class="{{ 'active' if page == 'dashboard' }}">≡ Timing</a></li>
-            <li><a href="/strategy" class="{{ 'active' if page == 'strategy' }}">▦ Strategy</a></li>
+            <li><a href="/overview"   class="{{ 'active' if page == 'overview' }}">⬡ Overview</a></li>
+            <li><a href="/dashboard"  class="{{ 'active' if page == 'dashboard' }}">≡ Timing</a></li>
+            <li><a href="/strategy"   class="{{ 'active' if page == 'strategy' }}">▦ Strategy</a></li>
             <li><a href="/racecontrol" class="{{ 'active' if page == 'racecontrol' }}">⚑ Race Control</a></li>
-            <li><a href="/schedule" class="{{ 'active' if page == 'schedule' }}">📅 Schedule</a></li>
+            <li><a href="/schedule"   class="{{ 'active' if page == 'schedule' }}">📅 Schedule</a></li>
             {% if user.is_admin %}
             <li><a href="/admin/users" class="{{ 'active' if page == 'admin' }}">⚙ Admin</a></li>
             {% endif %}
@@ -32,11 +46,28 @@
         </div>
     </nav>
 
-    <main class="content">
+    <!-- Bottom nav (mobile) -->
+    <nav class="bottom-nav">
+        <ul>
+            <li><a href="/overview"    class="{{ 'active' if page == 'overview' }}">
+                <span class="nav-icon">⬡</span>Overview</a></li>
+            <li><a href="/dashboard"   class="{{ 'active' if page == 'dashboard' }}">
+                <span class="nav-icon">≡</span>Timing</a></li>
+            <li><a href="/strategy"    class="{{ 'active' if page == 'strategy' }}">
+                <span class="nav-icon">▦</span>Strategy</a></li>
+            <li><a href="/racecontrol" class="{{ 'active' if page == 'racecontrol' }}">
+                <span class="nav-icon">⚑</span>Control</a></li>
+            <li><a href="/schedule"    class="{{ 'active' if page == 'schedule' }}">
+                <span class="nav-icon">📅</span>Schedule</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main content -->
+    <main class="content" id="main-content">
         {% block content %}
         <div class="placeholder">
             <h2>F1 Pit Wall</h2>
-            <p>Dashboard coming in Phase 5.</p>
+            <p>Select a page from the navigation.</p>
         </div>
         {% endblock %}
     </main>
