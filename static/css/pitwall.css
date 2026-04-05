@@ -823,3 +823,130 @@ body {
 }
 .seek-status.ok    { color: var(--green); }
 .seek-status.error { color: var(--accent); }
+
+/* ── Timing tower ── */
+.timing-page {
+    padding-top: 1rem;
+    overflow-x: auto;
+}
+
+.timing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    min-width: 700px;
+}
+
+.timing-table thead th {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.timing-table tbody tr.d-row {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+}
+
+.timing-table tbody tr.d-row:hover { background: var(--surface); }
+.timing-table tbody tr.in-pit      { background: rgba(255,215,0,0.04); }
+
+.timing-table td {
+    padding: 0.45rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.timing-loading {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 2rem 0.6rem;
+}
+
+/* Columns */
+.col-pos    { width: 36px; color: var(--muted); }
+.col-driver { min-width: 110px; }
+.col-lap    { min-width: 90px; }
+.col-gap    { min-width: 80px; }
+.col-tyre   { min-width: 70px; }
+.col-sector { min-width: 70px; }
+.col-pits   { width: 44px; text-align: center; }
+
+.mono  { font-family: var(--font-mono); }
+.muted { color: var(--muted); }
+
+/* Driver cell */
+.col-driver {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.team-bar {
+    display: inline-block;
+    width: 3px;
+    height: 1.1em;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.driver-abbr {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.pit-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    background: var(--sc-yellow);
+    color: #000;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+/* Tyre cell */
+.col-tyre {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.tyre-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tyre-label { font-size: 0.75rem; font-weight: 600; }
+.tyre-age   { font-size: 0.75rem; }
+
+/* Sector colours */
+.sector-purple { color: var(--purple); font-weight: 600; }
+.sector-green  { color: var(--green); }
+
+/* Flash animations */
+@keyframes lapFlash {
+    0%   { background: rgba(255,215,0,0.3); }
+    100% { background: transparent; }
+}
+@keyframes posUp {
+    0%   { background: rgba(39,174,96,0.25); }
+    100% { background: transparent; }
+}
+@keyframes posDown {
+    0%   { background: rgba(232,0,45,0.15); }
+    100% { background: transparent; }
+}
+
+.d-row.flash    { animation: lapFlash 1s ease-out; }
+.d-row.pos-up   { animation: posUp   1s ease-out; }
+.d-row.pos-down { animation: posDown 1s ease-out; }

@@ -14,7 +14,7 @@ from state import update_state
 class ReplayEngine:
     def __init__(self, session, speed: float = 1.0):
         self.speed = speed
-        self.tick_interval = 3.0
+        self.tick_interval = 1.0
 
         self.driver_info  = extract_driver_info(session)
         self.laps         = extract_laps(session)
@@ -262,7 +262,7 @@ class ReplayEngine:
         })
 
     def _compute_gaps(self, ds: dict, positions: list, leader_lap_time: float | None) -> tuple[str, str]:
-        if not positions or leader_lap_time is None or leader_lap_time <= 0:
+        if not positions:
             return ("leader", "+0.000")
 
         pos = ds["position"]
@@ -277,18 +277,57 @@ class ReplayEngine:
         if idx is None:
             return ("—", "—")
 
-        leader = sorted_pos[0]
-        ahead  = sorted_pos[idx - 1] if idx > 0 else None
+        ahead = sorted_pos[idx - 1] if idx > 0 else None
+        my_abbr = ds["abbreviation"]
+        leader_abbr = sorted_pos[0]["abbreviation"]
 
-        gap_frac    = (leader["lap_fraction"] - ds["lap_fraction"]) % 1.0
-        gap_seconds = gap_frac * leader_lap_time
+        # Use the same lap number for comparison — how many seconds after the
+        # leader did this driver complete that same lap?
+        my_lap_num = ds.get("lap_number")
+        if my_lap_num is None:
+            return ("—", "—")
+
+        leader_time = self._session_time_for_lap(leader_abbr, my_lap_num)
+        my_time     = self._session_time_for_lap(my_abbr, my_lap_num)
+
+        if leader_time is not None and my_time is not None:
+            gap_seconds = my_time - leader_time
+            gap_str = f"+{gap_seconds:.3f}" if gap_seconds >= 0 else f"{gap_seconds:.3f}"
+        else:
+            gap_str = "—"
 
         if ahead:
-            int_frac    = (ahead["lap_fraction"] - ds["lap_fraction"]) % 1.0
-            int_seconds = int_frac * leader_lap_time
-            return (f"+{gap_seconds:.3f}", f"+{int_seconds:.3f}")
+            ahead_abbr = ahead["abbreviation"]
+            ahead_lap  = ahead.get("lap_number")
+            # Compare on the lap number the car ahead is on
+            compare_lap = min(my_lap_num, ahead_lap) if ahead_lap else my_lap_num
+            ahead_time = self._session_time_for_lap(ahead_abbr, compare_lap)
+            my_cmp     = self._session_time_for_lap(my_abbr, compare_lap)
+            if ahead_time is not None and my_cmp is not None:
+                int_seconds = my_cmp - ahead_time
+                int_str = f"+{int_seconds:.3f}" if int_seconds >= 0 else f"{int_seconds:.3f}"
+            else:
+                int_str = "—"
+        else:
+            int_str = "—"
 
-        return (f"+{gap_seconds:.3f}", "—")
+        return (gap_str, int_str)
+
+    def _session_time_for_lap(self, abbreviation: str, lap_number: int) -> float | None:
+        """Return the session time at which this driver completed the given lap number."""
+        for lap in self.laps:
+            if lap["driver"] == abbreviation and lap["lap_number"] == lap_number:
+                return lap["session_time"]
+        return None
+
+    def _last_lap_session_time(self, abbreviation: str) -> float | None:
+        result = None
+        for lap in self.laps:
+            if lap["driver"] == abbreviation and lap["session_time"] <= self.simulated_time:
+                result = lap["session_time"]
+            elif lap["session_time"] > self.simulated_time:
+                break
+        return result
 
     def _blank_driver(self, abbreviation: str) -> dict:
         info = self.driver_info.get(abbreviation, {})

@@ -1,4 +1,4 @@
-const POLL_INTERVAL = 3000;
+const POLL_INTERVAL = 1000;
 
 const STATUS_MAP = {
     '1': null,
