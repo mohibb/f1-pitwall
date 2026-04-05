@@ -1,7 +1,144 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="placeholder">
-    <h2>Overview</h2>
-    <p>Coming in Phase 5.</p>
+<div class="overview-page">
+
+    <!-- Top row: session info + mode -->
+    <div class="overview-header">
+        <div class="overview-event">
+            <span class="ov-country" id="ov-country">—</span>
+            <span class="ov-circuit" id="ov-circuit">—</span>
+            <span class="ov-round" id="ov-round"></span>
+        </div>
+        <div class="overview-meta">
+            <span class="ov-session" id="ov-session">—</span>
+            <span class="ov-year" id="ov-year"></span>
+        </div>
+    </div>
+
+    <!-- Lap + clock -->
+    <div class="overview-timing-row">
+        <div class="ov-tile">
+            <span class="ov-tile-label">LAP</span>
+            <span class="ov-tile-value" id="ov-lap">—</span>
+        </div>
+        <div class="ov-tile">
+            <span class="ov-tile-label">SESSION TIME</span>
+            <span class="ov-tile-value mono" id="ov-clock">00:00:00</span>
+        </div>
+        <div class="ov-tile">
+            <span class="ov-tile-label">MODE</span>
+            <span class="ov-tile-value" id="ov-mode">—</span>
+        </div>
+    </div>
+
+    <!-- Weather strip -->
+    <div class="overview-section-label">WEATHER</div>
+    <div class="weather-strip">
+        <div class="weather-tile">
+            <span class="weather-label">AIR</span>
+            <span class="weather-value" id="wx-air">—</span>
+            <span class="weather-unit">°C</span>
+        </div>
+        <div class="weather-tile">
+            <span class="weather-label">TRACK</span>
+            <span class="weather-value" id="wx-track">—</span>
+            <span class="weather-unit">°C</span>
+        </div>
+        <div class="weather-tile">
+            <span class="weather-label">HUMIDITY</span>
+            <span class="weather-value" id="wx-humidity">—</span>
+            <span class="weather-unit">%</span>
+        </div>
+        <div class="weather-tile">
+            <span class="weather-label">WIND</span>
+            <span class="weather-value" id="wx-wind">—</span>
+            <span class="weather-unit">m/s</span>
+        </div>
+        <div class="weather-tile">
+            <span class="weather-label">RAIN</span>
+            <span class="weather-value" id="wx-rain">—</span>
+        </div>
+    </div>
+
+    <!-- Recent race control messages -->
+    <div class="overview-section-label">RACE CONTROL</div>
+    <div class="ov-rc-feed" id="ov-rc-feed">
+        <div class="ov-rc-empty">No messages yet</div>
+    </div>
+
 </div>
+
+<script>
+document.addEventListener('f1:update', (e) => {
+    const s = e.detail;
+
+    // Session info
+    if (s.session) {
+        setText('ov-country',  s.session.country  || '—');
+        setText('ov-circuit',  s.session.circuit  || '—');
+        setText('ov-round',    s.session.round    ? `Round ${s.session.round}` : '');
+        setText('ov-session',  s.session.name     || '—');
+        setText('ov-year',     s.session.year     || '');
+        setText('ov-clock',    s.session.simulated_time || '00:00:00');
+
+        if (s.session.current_lap && s.session.total_laps) {
+            setText('ov-lap', `${s.session.current_lap} / ${s.session.total_laps}`);
+        } else if (s.session.total_laps) {
+            setText('ov-lap', `— / ${s.session.total_laps}`);
+        }
+    }
+
+    // Mode
+    const modeEl = document.getElementById('ov-mode');
+    if (modeEl) {
+        modeEl.textContent = s.mode || '—';
+        modeEl.className = 'ov-tile-value mode-' + (s.mode || 'idle').toLowerCase();
+    }
+
+    // Weather
+    if (s.weather) {
+        setText('wx-air',      s.weather.air_temp   != null ? s.weather.air_temp.toFixed(1)   : '—');
+        setText('wx-track',    s.weather.track_temp != null ? s.weather.track_temp.toFixed(1) : '—');
+        setText('wx-humidity', s.weather.humidity   != null ? s.weather.humidity.toFixed(0)   : '—');
+        setText('wx-wind',     s.weather.wind_speed != null ? s.weather.wind_speed.toFixed(1) : '—');
+        setText('wx-rain',     s.weather.rainfall   ? '🌧 YES' : 'NO');
+    }
+
+    // Race control (last 5 messages)
+    if (s.race_control && s.race_control.length > 0) {
+        const feed = document.getElementById('ov-rc-feed');
+        const recent = [...s.race_control].reverse().slice(0, 5);
+        feed.innerHTML = recent.map(msg => `
+            <div class="ov-rc-msg ${flagClass(msg.flag)}">
+                <span class="rc-lap">${msg.lap ? 'LAP ' + msg.lap : ''}</span>
+                <span class="rc-time mono">${fmtTime(msg.session_time)}</span>
+                <span class="rc-text">${msg.message}</span>
+            </div>
+        `).join('');
+    }
+});
+
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+function flagClass(flag) {
+    if (!flag) return '';
+    const f = flag.toUpperCase();
+    if (f.includes('SAFETY CAR') || f === 'SC') return 'rc-sc';
+    if (f.includes('RED'))    return 'rc-red';
+    if (f.includes('YELLOW')) return 'rc-yellow';
+    if (f.includes('VSC'))    return 'rc-vsc';
+    return '';
+}
+
+function fmtTime(seconds) {
+    if (!seconds) return '';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+</script>
 {% endblock %}
