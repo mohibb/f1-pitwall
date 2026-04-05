@@ -130,10 +130,35 @@ def extract_weather(session: fastf1.core.Session) -> list[dict]:
 
 def extract_race_control(session: fastf1.core.Session) -> list[dict]:
     messages = []
-    for _, row in session.race_control_messages.iterrows():
+    rc = session.race_control_messages.copy()
+
+    # Time column may be wall-clock Timestamps or timedeltas depending on FastF1 version.
+    # Normalise to session-relative seconds using the session start time.
+    session_start = session.date
+    if session_start is None:
+        return messages
+
+    # Make session_start timezone-aware if needed
+    import pytz
+    if hasattr(session_start, 'tzinfo') and session_start.tzinfo is None:
+        session_start = session_start.replace(tzinfo=pytz.utc)
+
+    for _, row in rc.iterrows():
         try:
+            t = row["Time"]
+            if pd.isna(t):
+                session_time = 0.0
+            elif hasattr(t, 'total_seconds'):
+                # Already a timedelta
+                session_time = t.total_seconds()
+            else:
+                # Wall clock Timestamp — convert to session-relative seconds
+                if hasattr(t, 'tzinfo') and t.tzinfo is None:
+                    t = t.replace(tzinfo=pytz.utc)
+                session_time = (t - session_start).total_seconds()
+
             messages.append({
-                "session_time": row["Time"].total_seconds() if not pd.isna(row["Time"]) else 0,
+                "session_time": max(session_time, 0.0),
                 "message":      str(row["Message"]),
                 "flag":         str(row["Flag"]) if not pd.isna(row["Flag"]) else "",
                 "lap":          int(row["Lap"]) if not pd.isna(row["Lap"]) else None,
