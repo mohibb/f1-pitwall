@@ -11,6 +11,7 @@ from slowapi.util import get_remote_address
 from database import init_db
 from session_manager import SessionManager
 from routers import api, web
+from routers.api import set_session_manager
 
 limiter = Limiter(key_func=get_remote_address)
 session_manager = SessionManager()
@@ -19,6 +20,7 @@ session_manager = SessionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    set_session_manager(session_manager)
     session_manager.start()
     yield
     session_manager.stop()

@@ -66,6 +66,18 @@
         <div class="ov-rc-empty">No messages yet</div>
     </div>
 
+    <!-- Admin: replay seek (only shown to admins in REPLAY mode) -->
+    {% if user.is_admin %}
+    <div class="replay-seek-panel" id="replay-seek-panel" style="display:none">
+        <div class="overview-section-label">REPLAY — JUMP TO LAP</div>
+        <div class="replay-seek-row">
+            <input type="number" id="seek-lap-input" min="1" placeholder="Lap number" class="seek-input">
+            <button id="seek-btn" class="seek-btn">Jump</button>
+            <span id="seek-status" class="seek-status"></span>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 
 <script>
@@ -86,6 +98,12 @@ document.addEventListener('f1:update', (e) => {
         } else if (s.session.total_laps) {
             setText('ov-lap', `— / ${s.session.total_laps}`);
         }
+
+        // Update seek input max
+        const seekInput = document.getElementById('seek-lap-input');
+        if (seekInput && s.session.total_laps) {
+            seekInput.max = s.session.total_laps;
+        }
     }
 
     // Mode
@@ -93,6 +111,12 @@ document.addEventListener('f1:update', (e) => {
     if (modeEl) {
         modeEl.textContent = s.mode || '—';
         modeEl.className = 'ov-tile-value mode-' + (s.mode || 'idle').toLowerCase();
+    }
+
+    // Show/hide seek panel (admin only, replay only)
+    const seekPanel = document.getElementById('replay-seek-panel');
+    if (seekPanel) {
+        seekPanel.style.display = (s.mode === 'REPLAY') ? 'block' : 'none';
     }
 
     // Weather
@@ -117,6 +141,39 @@ document.addEventListener('f1:update', (e) => {
         `).join('');
     }
 });
+
+// Seek button handler
+const seekBtn = document.getElementById('seek-btn');
+if (seekBtn) {
+    seekBtn.addEventListener('click', async () => {
+        const input = document.getElementById('seek-lap-input');
+        const status = document.getElementById('seek-status');
+        const lap = parseInt(input.value);
+        if (!lap || lap < 1) {
+            status.textContent = 'Enter a valid lap number.';
+            status.className = 'seek-status error';
+            return;
+        }
+        seekBtn.disabled = true;
+        status.textContent = 'Jumping...';
+        status.className = 'seek-status';
+        try {
+            const res = await fetch(`/api/replay/seek?lap=${lap}`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                status.textContent = `Jumped to lap ${data.sought_to_lap}.`;
+                status.className = 'seek-status ok';
+            } else {
+                status.textContent = data.detail || 'Failed.';
+                status.className = 'seek-status error';
+            }
+        } catch (e) {
+            status.textContent = 'Request failed.';
+            status.className = 'seek-status error';
+        }
+        seekBtn.disabled = false;
+    });
+}
 
 function setText(id, val) {
     const el = document.getElementById(id);

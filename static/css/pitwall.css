@@ -566,3 +566,52 @@ body {
 .rc-lap  { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); min-width: 50px; }
 .rc-time { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); min-width: 65px; }
 .rc-text { color: var(--text); flex: 1; }
+
+/* ── Replay seek panel ── */
+.replay-seek-panel {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.replay-seek-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.seek-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    width: 130px;
+    outline: none;
+}
+.seek-input:focus { border-color: var(--accent); }
+
+.seek-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: opacity 0.15s;
+}
+.seek-btn:hover    { opacity: 0.85; }
+.seek-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.seek-status {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+.seek-status.ok    { color: var(--green); }
+.seek-status.error { color: var(--accent); }

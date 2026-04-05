@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
-from auth import get_current_user
+from auth import get_current_user, require_admin
 from state import get_state
 from fastf1_loader import extract_schedule
 
@@ -14,6 +14,13 @@ router = APIRouter()
 _start_time = time.time()
 _schedule_cache: list[dict] = []
 _schedule_year: int | None = None
+
+# Set by main.py after session_manager is created
+_session_manager = None
+
+def set_session_manager(sm):
+    global _session_manager
+    _session_manager = sm
 
 
 def _get_schedule() -> list[dict]:
@@ -70,3 +77,26 @@ async def health():
         "last_update": datetime.now(timezone.utc).isoformat(),
         "cache_size_mb": _cache_size_mb(),
     }
+
+
+@router.post("/replay/seek")
+async def replay_seek(
+    lap: int,
+    current_user=Depends(require_admin),
+):
+    if _session_manager is None:
+        raise HTTPException(status_code=503, detail="Session manager not ready")
+
+    state = get_state()
+    if state.get("mode") != "REPLAY":
+        raise HTTPException(status_code=400, detail="Only available in REPLAY mode")
+
+    total_laps = state.get("session", {}).get("total_laps") or 0
+    if lap < 1 or (total_laps and lap > total_laps):
+        raise HTTPException(status_code=400, detail=f"Lap must be between 1 and {total_laps}")
+
+    success = _session_manager.seek(lap)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Lap {lap} not found in session data")
+
+    return {"ok": True, "sought_to_lap": lap}

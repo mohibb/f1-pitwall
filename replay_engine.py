@@ -33,8 +33,6 @@ class ReplayEngine:
         self._driver_state: dict[str, dict] = {}
         self._lap_times: dict[str, list[float]] = defaultdict(list)
         self._rc_emitted: list[dict] = []
-
-        # Track which lap records have already been applied
         self._applied_laps: set[int] = set()
 
         self._max_time = max(
@@ -68,6 +66,36 @@ class ReplayEngine:
             time.sleep(self.tick_interval)
         print("[replay] Stopped")
 
+    def seek(self, lap_number: int) -> bool:
+        """
+        Seek to the start of the given lap number.
+        Returns True if successful, False if lap not found.
+        """
+        target_time = None
+        for lap in self.laps:
+            if lap["lap_number"] == lap_number and lap["lap_start_time"] is not None:
+                if target_time is None or lap["lap_start_time"] < target_time:
+                    target_time = lap["lap_start_time"]
+
+        if target_time is None:
+            return False
+
+        print(f"[replay] Seeking to lap {lap_number} (t={target_time:.1f}s)")
+        self.simulated_time = target_time
+        self._driver_state.clear()
+        self._lap_times.clear()
+        self._rc_emitted.clear()
+        self._applied_laps.clear()
+        update_state({"race_control": []})
+
+        # Fast-forward state up to the seek point
+        self._process_laps()
+        self._process_weather()
+        self._process_race_control()
+        self._push_state()
+
+        return True
+
     # ------------------------------------------------------------------ #
     # Internal                                                             #
     # ------------------------------------------------------------------ #
@@ -98,12 +126,11 @@ class ReplayEngine:
 
             ds = self._driver_state[driver]
 
-            # Only use accurate laps for rolling average lap time
             if lap.get("is_accurate") and lap["lap_time"]:
                 try:
                     parts = lap["lap_time"].split(":")
                     secs = float(parts[0]) * 60 + float(parts[1])
-                    if 60 < secs < 300:  # sanity check: between 1 and 5 minutes
+                    if 60 < secs < 300:
                         self._lap_times[driver].append(secs)
                         if len(self._lap_times[driver]) > 3:
                             self._lap_times[driver].pop(0)
@@ -128,7 +155,6 @@ class ReplayEngine:
             if lap["is_personal_best"] and lap["lap_time"]:
                 ds["best_lap"] = lap["lap_time"]
 
-            # Pit detection
             ds["in_pit"] = False
             if lap["pit_in_time"] is not None:
                 pit_out = lap["pit_out_time"] or (lap["pit_in_time"] + 30)
@@ -136,12 +162,10 @@ class ReplayEngine:
                     ds["in_pit"] = True
                     ds["pit_stops"] = ds.get("pit_stops", 0) + 1
 
-        # Update lap_fraction for all drivers on every tick
         for driver, ds in self._driver_state.items():
             ds["lap_fraction"] = self._compute_lap_fraction(driver, ds)
 
     def _compute_lap_fraction(self, driver: str, ds: dict) -> float:
-        # Find the most recent lap for this driver
         last_lap = None
         for lap in reversed(self.laps):
             if lap["driver"] == driver and lap["session_time"] <= self.simulated_time:

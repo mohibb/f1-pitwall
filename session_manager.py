@@ -14,11 +14,12 @@ REPLAY_SPEED = float(os.getenv("REPLAY_SPEED", "1.0"))
 
 class SessionManager:
     def __init__(self):
-        self._stop_event   = threading.Event()
-        self._replay_stop  = threading.Event()
-        self._thread       = None
+        self._stop_event    = threading.Event()
+        self._replay_stop   = threading.Event()
+        self._thread        = None
         self._replay_thread = None
-        self.mode          = "IDLE"
+        self.mode           = "IDLE"
+        self.engine: ReplayEngine | None = None
 
     def start(self):
         enable_cache(CACHE_DIR)
@@ -30,6 +31,11 @@ class SessionManager:
         self._stop_event.set()
         self._replay_stop.set()
         print("[session] Session manager stopped")
+
+    def seek(self, lap_number: int) -> bool:
+        if self.engine is None:
+            return False
+        return self.engine.seek(lap_number)
 
     # ------------------------------------------------------------------ #
     # Internal                                                             #
@@ -57,10 +63,10 @@ class SessionManager:
         self._replay_stop.clear()
         self.mode = "REPLAY"
 
-        engine = ReplayEngine(session, speed=REPLAY_SPEED)
+        self.engine = ReplayEngine(session, speed=REPLAY_SPEED)
 
         self._replay_thread = threading.Thread(
-            target=engine.run,
+            target=self.engine.run,
             args=(self._replay_stop,),
             daemon=True,
         )
