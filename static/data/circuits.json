@@ -1,0 +1,226 @@
+{
+  "default": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.666
+    ],
+    "drs_zones": []
+  },
+  "Bahrain": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Jeddah": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Melbourne": {
+    "pit_fraction": 0.97,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Suzuka": {
+    "pit_fraction": 0.95,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Shanghai": {
+    "pit_fraction": 0.94,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Miami": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Imola": {
+    "pit_fraction": 0.96,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Monaco": {
+    "pit_fraction": 0.97,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Barcelona": {
+    "pit_fraction": 0.94,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Montreal": {
+    "pit_fraction": 0.95,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Spielberg": {
+    "pit_fraction": 0.96,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Silverstone": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Budapest": {
+    "pit_fraction": 0.95,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Spa": {
+    "pit_fraction": 0.94,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Zandvoort": {
+    "pit_fraction": 0.96,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Monza": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Baku": {
+    "pit_fraction": 0.95,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Singapore": {
+    "pit_fraction": 0.97,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Austin": {
+    "pit_fraction": 0.94,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Mexico City": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Sao Paulo": {
+    "pit_fraction": 0.95,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Las Vegas": {
+    "pit_fraction": 0.93,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Lusail": {
+    "pit_fraction": 0.94,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  },
+  "Yas Marina": {
+    "pit_fraction": 0.94,
+    "sectors": [
+      0.333,
+      0.583,
+      1.0
+    ],
+    "drs_zones": []
+  }
+}
