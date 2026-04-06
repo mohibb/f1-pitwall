@@ -41,6 +41,17 @@ async def init_db():
             )
         """)
 
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        """)
+
+        await db.execute("""
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('pit_stop_duration', '25')
+        """)
+
         await db.commit()
         await _seed_admin(db)
 
@@ -109,3 +120,37 @@ async def change_password(username: str, new_password: str):
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
+
+
+async def get_setting(key: str, default: str = None) -> str:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT value FROM settings WHERE key = ?", (key,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else default
+
+
+async def set_setting(key: str, value: str) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+        await db.commit()
+
+
+async def get_all_settings() -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT key, value FROM settings") as cursor:
+            rows = await cursor.fetchall()
+            return {row[0]: row[1] for row in rows}
+
+
+def get_setting_sync(key: str, default: str = None) -> str:
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        row = cur.fetchone()
+        return row[0] if row else default
+    finally:
+        conn.close()

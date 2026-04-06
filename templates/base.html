@@ -36,6 +36,7 @@
             <li><a href="/schedule"   class="{{ 'active' if page == 'schedule' }}">📅 Schedule</a></li>
             {% if user.is_admin %}
             <li><a href="/admin/users" class="{{ 'active' if page == 'admin' }}">⚙ Admin</a></li>
+            <li><a href="/admin/settings" class="{{ 'active' if page == 'settings' }}">⚙ Settings</a></li>
             {% endif %}
         </ul>
         <div class="sidebar-footer">

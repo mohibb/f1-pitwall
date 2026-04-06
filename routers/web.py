@@ -10,6 +10,8 @@ from database import (
     create_user,
     delete_user,
     get_all_users,
+    get_all_settings,
+    set_setting,
     get_user_by_username,
     verify_password,
 )
@@ -205,3 +207,29 @@ async def admin_change_password(
             "success": f"Password updated for '{username}'.",
         },
     )
+
+@router.get("/admin/settings")
+async def admin_settings(request: Request, current_user=Depends(require_admin)):
+    settings = await get_all_settings()
+    return templates.TemplateResponse("admin/settings.html", {
+        "request": request,
+        "user": current_user,
+        "settings": settings,
+    })
+
+
+@router.post("/admin/settings")
+async def admin_settings_save(
+    request: Request,
+    current_user=Depends(require_admin),
+):
+    form = await request.form()
+    for key, value in form.items():
+        await set_setting(key, value.strip())
+    settings = await get_all_settings()
+    return templates.TemplateResponse("admin/settings.html", {
+        "request": request,
+        "user": current_user,
+        "settings": settings,
+        "saved": True,
+    })

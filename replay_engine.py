@@ -8,6 +8,7 @@ from fastf1_loader import (
     extract_total_laps,
     extract_weather,
 )
+from database import get_setting_sync
 from state import update_state
 
 
@@ -144,7 +145,8 @@ class ReplayEngine:
 
             ds["in_pit"] = False
             if lap["pit_in_time"] is not None:
-                pit_out = lap["pit_out_time"] or (lap["pit_in_time"] + 30)
+                pit_duration = int(get_setting_sync("pit_stop_duration", "25"))
+                pit_out = lap["pit_out_time"] or (lap["pit_in_time"] + pit_duration)
                 if lap["pit_in_time"] <= self.simulated_time <= pit_out:
                     ds["in_pit"] = True
                     ds["pit_stops"] = ds.get("pit_stops", 0) + 1

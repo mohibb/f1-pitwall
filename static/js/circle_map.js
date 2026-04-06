@@ -53,6 +53,7 @@
   // lastUpdate   — ms timestamp of last API update
   let _driverPos  = {};
   let _lastPollMs = 0;   // real time of last f1:update
+  let _pitDrivers = [];  // ordered list of abbrs currently in pit
 
   // ── Init ───────────────────────────────────────────────────────────────────
   function init() {
@@ -69,6 +70,7 @@
         _lastState = e.detail;
         _lastPollMs = performance.now();
         updateCircuit();
+        updatePitDrivers();
         // Don't call draw() here — animation loop handles it at 60fps
       });
 
@@ -155,6 +157,7 @@
     drawPitLane();
     drawStartFinish();
     drawDrivers();
+    drawPitDrivers();
   }
 
   // ── Track circle ───────────────────────────────────────────────────────────
@@ -305,6 +308,78 @@
     } catch (e) {
       return 95.0;
     }
+  }
+
+  // ── Pit lane drivers ───────────────────────────────────────────────────────
+  function updatePitDrivers() {
+    if (!_lastState || !_lastState.drivers) return;
+    const drivers = _lastState.drivers;
+
+    // Maintain stable order — keep existing pit drivers in their slot,
+    // append newly pitting drivers at the end, remove drivers that rejoined
+    const nowInPit = Object.keys(drivers).filter(function (a) {
+      return drivers[a].in_pit;
+    });
+
+    // Remove drivers that left the pit
+    _pitDrivers = _pitDrivers.filter(function (a) {
+      return nowInPit.indexOf(a) !== -1;
+    });
+
+    // Add newly pitting drivers
+    nowInPit.forEach(function (a) {
+      if (_pitDrivers.indexOf(a) === -1) _pitDrivers.push(a);
+    });
+  }
+
+  function drawPitDrivers() {
+    if (!_lastState || !_lastState.drivers) return;
+    if (!_pitDrivers.length) return;
+
+    const drivers  = _lastState.drivers;
+    const pitF     = _circuit.pit_fraction;
+
+    // Pit lane centre point (inward from circle)
+    const pitCentre = fractionToXY(pitF, _radius - PIT_LABEL_OFFSET + 6);
+
+    // Direction vector pointing inward along the radius at pit_fraction
+    const angle   = fractionToAngle(pitF);
+    const perpX   = -Math.sin(angle);   // perpendicular to radius = along circle tangent
+    const perpY   =  Math.cos(angle);
+
+    // Spacing between dots in the pit lane
+    const spacing = _dotR * 2.8;
+    // Centre the group of dots
+    const totalW  = (_pitDrivers.length - 1) * spacing;
+    const startX  = pitCentre.x - perpX * totalW / 2;
+    const startY  = pitCentre.y - perpY * totalW / 2;
+
+    _pitDrivers.forEach(function (abbr, i) {
+      const d = drivers[abbr];
+      if (!d) return;
+
+      const x     = startX + perpX * i * spacing;
+      const y     = startY + perpY * i * spacing;
+      const color = d.team_colour ? '#' + d.team_colour.replace('#', '') : C.fallback;
+
+      // Dot — slightly smaller, dashed border to distinguish from on-track
+      _ctx.beginPath();
+      _ctx.arc(x, y, _dotR * 0.85, 0, 2 * Math.PI);
+      _ctx.fillStyle = color;
+      _ctx.fill();
+      _ctx.setLineDash([2, 2]);
+      _ctx.strokeStyle = C.dotBorder;
+      _ctx.lineWidth   = 1.5;
+      _ctx.stroke();
+      _ctx.setLineDash([]);
+
+      // Label
+      _ctx.fillStyle    = C.text;
+      _ctx.font         = 'bold 7px JetBrains Mono, monospace';
+      _ctx.textAlign    = 'center';
+      _ctx.textBaseline = 'middle';
+      _ctx.fillText(abbr, x, y + _dotR * 0.85 + 8);
+    });
   }
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────

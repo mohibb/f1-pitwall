@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-page">
+    <h2 class="admin-title">Settings</h2>
+
+    {% if saved %}
+    <div class="admin-notice">Settings saved.</div>
+    {% endif %}
+
+    <form method="post" action="/admin/settings" class="admin-form">
+        <div class="setting-row">
+            <label class="setting-label" for="pit_stop_duration">
+                Pit stop duration (seconds)
+                <span class="setting-hint">Used when FastF1 has no pit out time. Typical: 23-30s depending on circuit pit lane length.</span>
+            </label>
+            <input
+                class="setting-input"
+                type="number"
+                id="pit_stop_duration"
+                name="pit_stop_duration"
+                value="{{ settings.get('pit_stop_duration', '25') }}"
+                min="15"
+                max="60"
+                step="1"
+            >
+        </div>
+        <button class="admin-btn" type="submit">Save settings</button>
+    </form>
+</div>
+
+<style>
+.admin-page        { max-width: 600px; margin: 40px auto; padding: 0 20px; }
+.admin-title       { color: var(--text); font-size: 1.2rem; margin-bottom: 24px; }
+.admin-notice      { background: #1a3a1a; border: 1px solid #27ae60; color: #27ae60;
+                     padding: 10px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 0.85rem; }
+.admin-form        { background: var(--surface); border: 1px solid var(--border);
+                     border-radius: 6px; padding: 24px; }
+.setting-row       { margin-bottom: 24px; }
+.setting-label     { display: block; color: var(--text); font-size: 0.9rem;
+                     margin-bottom: 8px; font-family: "JetBrains Mono", monospace; }
+.setting-hint      { display: block; color: var(--muted); font-size: 0.75rem;
+                     margin-top: 4px; font-family: Inter, sans-serif; }
+.setting-input     { background: var(--bg); border: 1px solid var(--border); color: var(--text);
+                     padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; width: 100px; }
+.setting-input:focus { outline: none; border-color: var(--accent); }
+.admin-btn         { background: var(--accent); color: #fff; border: none;
+                     padding: 10px 24px; border-radius: 4px; cursor: pointer;
+                     font-size: 0.85rem; font-family: "JetBrains Mono", monospace; }
+.admin-btn:hover   { opacity: 0.85; }
+</style>
+{% endblock %}
