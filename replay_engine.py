@@ -153,17 +153,23 @@ class ReplayEngine:
             ds["lap_fraction"] = self._compute_lap_fraction(driver, ds)
 
     def _compute_lap_fraction(self, driver: str, ds: dict) -> float:
-        last_lap = None
+        # Find the lap currently in progress:
+        # the most recent lap whose lap_start_time <= simulated_time
+        current_lap = None
         for lap in reversed(self.laps):
-            if lap["driver"] == driver and lap["session_time"] <= self.simulated_time:
-                last_lap = lap
+            if lap["driver"] != driver:
+                continue
+            if lap["lap_start_time"] is None:
+                continue
+            if lap["lap_start_time"] <= self.simulated_time:
+                current_lap = lap
                 break
-        if last_lap is None or last_lap["lap_start_time"] is None:
+        if current_lap is None:
             return 0.0
         avg = self._avg_lap_time(driver)
         if avg <= 0:
             return 0.0
-        elapsed = self.simulated_time - last_lap["lap_start_time"]
+        elapsed = self.simulated_time - current_lap["lap_start_time"]
         return max(0.0, min(elapsed / avg, 1.0))
 
     def _avg_lap_time(self, driver: str) -> float:
