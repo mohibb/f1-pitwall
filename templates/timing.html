@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="timing-page">
+    <div class="timing-panel">
     <table class="timing-table" id="timing-table">
         <thead>
             <tr>
@@ -21,6 +22,10 @@
             <tr><td colspan="11" class="timing-loading">Waiting for data...</td></tr>
         </tbody>
     </table>
+    </div>
+    <div class="map-panel">
+        <canvas id="circle-map-canvas"></canvas>
+    </div>
 </div>
 
 <script>
@@ -165,4 +170,5 @@ function parseSector(val) {
     } catch { return null; }
 }
 </script>
+<script src="/static/js/circle_map.js"></script>
 {% endblock %}
