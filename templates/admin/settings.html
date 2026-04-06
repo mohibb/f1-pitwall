@@ -8,6 +8,7 @@
     {% endif %}
 
     <form method="post" action="/admin/settings" class="admin-form">
+
         <div class="setting-row">
             <label class="setting-label" for="pit_stop_duration">
                 Pit stop duration (seconds)
@@ -24,7 +25,23 @@
                 step="1"
             >
         </div>
-        <button class="admin-btn" type="submit">Save settings</button>
+
+        <div class="setting-row">
+            <label class="setting-label" for="seek-lap-input">
+                Replay seek
+                <span class="setting-hint">Jump to a specific lap in the current replay session.</span>
+            </label>
+            <div class="seek-row">
+                <input class="setting-input" type="number" id="seek-lap-input" min="1" max="100" placeholder="Lap">
+                <button class="seek-btn" type="button" id="seek-btn">Jump</button>
+                <span id="seek-status" class="seek-status"></span>
+            </div>
+        </div>
+
+        <div class="setting-save">
+            <button class="admin-btn" type="submit">Save settings</button>
+        </div>
+
     </form>
 </div>
 
@@ -43,9 +60,50 @@
 .setting-input     { background: var(--bg); border: 1px solid var(--border); color: var(--text);
                      padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; width: 100px; }
 .setting-input:focus { outline: none; border-color: var(--accent); }
+.seek-row          { display: flex; align-items: center; gap: 10px; }
+.seek-btn          { background: var(--accent); color: #fff; border: none;
+                     padding: 8px 16px; border-radius: 4px; cursor: pointer;
+                     font-size: 0.85rem; font-family: "JetBrains Mono", monospace; }
+.seek-btn:hover    { opacity: 0.85; }
+.seek-status       { font-size: 0.8rem; font-family: "JetBrains Mono", monospace; color: #888; }
+.setting-save      { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 8px; }
 .admin-btn         { background: var(--accent); color: #fff; border: none;
                      padding: 10px 24px; border-radius: 4px; cursor: pointer;
                      font-size: 0.85rem; font-family: "JetBrains Mono", monospace; }
 .admin-btn:hover   { opacity: 0.85; }
 </style>
+
+<script>
+const seekBtn = document.getElementById('seek-btn');
+if (seekBtn) {
+    seekBtn.addEventListener('click', async () => {
+        const input = document.getElementById('seek-lap-input');
+        const status = document.getElementById('seek-status');
+        const lap = parseInt(input.value);
+        if (!lap || lap < 1) {
+            status.textContent = 'Enter a valid lap number.';
+            status.style.color = '#e8002d';
+            return;
+        }
+        seekBtn.disabled = true;
+        status.textContent = 'Jumping...';
+        status.style.color = '#888';
+        try {
+            const res = await fetch(`/api/replay/seek?lap=${lap}`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                status.textContent = `Jumped to lap ${data.sought_to_lap}.`;
+                status.style.color = '#27ae60';
+            } else {
+                status.textContent = data.detail || 'Failed.';
+                status.style.color = '#e8002d';
+            }
+        } catch (e) {
+            status.textContent = 'Request failed.';
+            status.style.color = '#e8002d';
+        }
+        seekBtn.disabled = false;
+    });
+}
+</script>
 {% endblock %}

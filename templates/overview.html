@@ -93,10 +93,6 @@ document.addEventListener('f1:update', (e) => {
             setText('ov-lap', `— / ${s.session.total_laps}`);
         }
 
-        const seekInput = document.getElementById('seek-lap-input');
-        if (seekInput && s.session.total_laps) {
-            seekInput.max = s.session.total_laps;
-        }
     }
 
     const modeEl = document.getElementById('ov-mode');
@@ -105,10 +101,6 @@ document.addEventListener('f1:update', (e) => {
         modeEl.className = 'ov-tile-value mode-' + (s.mode || 'idle').toLowerCase();
     }
 
-    const seekPanel = document.getElementById('replay-seek-panel');
-    if (seekPanel) {
-        seekPanel.style.display = (s.mode === 'REPLAY') ? 'block' : 'none';
-    }
 
     if (s.weather) {
         setText('wx-air',      s.weather.air_temp   != null ? s.weather.air_temp.toFixed(1)   : '—');
@@ -131,37 +123,7 @@ document.addEventListener('f1:update', (e) => {
     }
 });
 
-const seekBtn = document.getElementById('seek-btn');
-if (seekBtn) {
-    seekBtn.addEventListener('click', async () => {
-        const input = document.getElementById('seek-lap-input');
-        const status = document.getElementById('seek-status');
-        const lap = parseInt(input.value);
-        if (!lap || lap < 1) {
-            status.textContent = 'Enter a valid lap number.';
-            status.className = 'seek-status error';
-            return;
-        }
-        seekBtn.disabled = true;
-        status.textContent = 'Jumping...';
-        status.className = 'seek-status';
-        try {
-            const res = await fetch(`/api/replay/seek?lap=${lap}`, { method: 'POST' });
-            const data = await res.json();
-            if (res.ok) {
-                status.textContent = `Jumped to lap ${data.sought_to_lap}.`;
-                status.className = 'seek-status ok';
-            } else {
-                status.textContent = data.detail || 'Failed.';
-                status.className = 'seek-status error';
-            }
-        } catch (e) {
-            status.textContent = 'Request failed.';
-            status.className = 'seek-status error';
-        }
-        seekBtn.disabled = false;
-    });
-}
+
 
 function setText(id, val) {
     const el = document.getElementById(id);
