@@ -254,17 +254,20 @@ class ReplayEngine:
             default=None,
         )
 
+        pit_stop_duration = int(get_setting_sync("pit_stop_duration", "25"))
+
         update_state({
             "mode": "REPLAY",
             "session": {
-                "name":           self.session_name,
-                "circuit":        self.circuit,
-                "country":        self.country,
-                "round":          self.round_number,
-                "year":           self.year,
-                "simulated_time": self._fmt_session_time(self.simulated_time),
-                "total_laps":     self.total_laps,
-                "current_lap":    current_lap,
+                "name":              self.session_name,
+                "circuit":           self.circuit,
+                "country":           self.country,
+                "round":             self.round_number,
+                "year":              self.year,
+                "simulated_time":    self._fmt_session_time(self.simulated_time),
+                "total_laps":        self.total_laps,
+                "current_lap":       current_lap,
+                "pit_stop_duration": pit_stop_duration,
             },
             "drivers": drivers_patch,
         })
