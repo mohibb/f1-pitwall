@@ -167,18 +167,53 @@
     drawTooltip();
   }
 
+  // Track status colour + pulse
+  function trackStatusStyle() {
+    const status = _lastState ? (_lastState.track_status || '1') : '1';
+    const t      = performance.now() / 1000;
+    const pulse  = 0.55 + 0.45 * Math.sin(t * Math.PI * 2);
+
+    switch (status) {
+      case '2': return { color: '#ffd700', alpha: 1.0,   width: TRACK_WIDTH };
+      case '4': return { color: '#ffd700', alpha: pulse,  width: TRACK_WIDTH + 2 };
+      case '5': return { color: '#ff0000', alpha: 1.0,   width: TRACK_WIDTH + 2 };
+      case '6': return { color: '#ffa500', alpha: pulse,  width: TRACK_WIDTH + 2 };
+      case '7': return { color: '#ffa500', alpha: 0.5,   width: TRACK_WIDTH };
+      default:  return { color: C.track,   alpha: 1.0,   width: TRACK_WIDTH };
+    }
+  }
+
   // Track circle
   function drawTrackCircle() {
     const pitF   = _circuit.pit_fraction;
     const gap    = PIT_NOTCH_ANGLE;
     const startA = fractionToAngle(pitF + gap / 2);
     const endA   = fractionToAngle(pitF - gap / 2 + 1) - 2 * Math.PI;
-    _ctx.strokeStyle = C.track;
-    _ctx.lineWidth   = TRACK_WIDTH;
+
+    const style  = trackStatusStyle();
+    _ctx.globalAlpha = style.alpha;
+    _ctx.strokeStyle = style.color;
+    _ctx.lineWidth   = style.width;
     _ctx.lineCap     = 'butt';
     _ctx.beginPath();
     _ctx.arc(_cx, _cy, _radius, startA, endA, false);
     _ctx.stroke();
+    _ctx.globalAlpha = 1.0;
+
+    // Status label
+    const label = { '4': 'SC', '6': 'VSC', '5': 'RED FLAG', '2': 'YELLOW' }[
+      _lastState ? _lastState.track_status : '1'
+    ];
+    if (label) {
+      const style2  = trackStatusStyle();
+      _ctx.fillStyle    = style2.color;
+      _ctx.globalAlpha  = style2.alpha;
+      _ctx.font         = 'bold 11px JetBrains Mono, monospace';
+      _ctx.textAlign    = 'center';
+      _ctx.textBaseline = 'middle';
+      _ctx.fillText(label, _cx, _cy);
+      _ctx.globalAlpha  = 1.0;
+    }
   }
 
   // Sector markers
