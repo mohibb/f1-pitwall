@@ -9,7 +9,7 @@
   'use strict';
 
   // Constants
-  const PADDING            = 24;
+  const PADDING            = 32;
   const DOT_RADIUS_DESKTOP = 8;
   const DOT_RADIUS_MOBILE  = 6;
   const MOBILE_BREAKPOINT  = 600;
@@ -51,6 +51,9 @@
   let _selected   = null;
   let _mouseX     = 0;
   let _mouseY     = 0;
+  let _lastTouchMs  = 0;
+  let _touchStartX  = 0;
+  let _touchStartY  = 0;
 
   // Init
   function init() {
@@ -71,7 +74,35 @@
 
       _canvas.addEventListener('mousemove', onMouseMove);
       _canvas.addEventListener('click', onClick);
-      _canvas.addEventListener('touchstart', onTouch, { passive: true });
+      document.addEventListener('touchstart', function(e) {
+        const touch = e.touches && e.touches[0];
+        if (!touch) return;
+        const rect = _canvas.getBoundingClientRect();
+        _touchStartX = touch.clientX - rect.left;
+        _touchStartY = touch.clientY - rect.top;
+      }, { passive: true });
+      document.addEventListener('touchend', function(e) {
+        const touch = e.changedTouches && e.changedTouches[0];
+        if (!touch) return;
+        const rect = _canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        // Only handle if touch ended within canvas bounds
+        if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+        // Only handle if finger didn't move much (it's a tap not a scroll)
+        const dx = Math.abs(x - _touchStartX);
+        const dy = Math.abs(y - _touchStartY);
+        if (dx > 10 || dy > 10) return;
+        _lastTouchMs = performance.now();
+        const hit = hitTest(x, y, 24);
+        _selected = (hit && hit !== _selected) ? hit : null;
+        updateDetailPanel();
+      }, { passive: true });
+      // Attach touch to parent panel for better mobile compatibility
+      const mapPanel = _canvas.parentElement;
+      if (mapPanel) {
+        mapPanel.addEventListener('touchend', onTouch, { passive: true });
+      }
 
       animationLoop();
     });
@@ -96,16 +127,17 @@
     if (!_canvas) return;
     const container = _canvas.parentElement;
     const w = container.clientWidth;
-    const h = container.clientHeight;
+    const h = _canvas.clientHeight;
     const dpr = window.devicePixelRatio || 1;
     _canvas.width  = w * dpr;
     _canvas.height = h * dpr;
     _canvas.style.width  = w + 'px';
     _canvas.style.height = h + 'px';
+    _ctx.setTransform(1, 0, 0, 1, 0, 0);  // reset transform before scaling
     _ctx.scale(dpr, dpr);
     _cx     = w / 2;
     _cy     = h / 2;
-    _radius = Math.min(w, h) / 2 - PADDING;
+    _radius = Math.max(10, Math.min(w, h) / 2 - PADDING);
     _dotR   = w < MOBILE_BREAKPOINT ? DOT_RADIUS_MOBILE : DOT_RADIUS_DESKTOP;
     _driverPos = {};
   }
@@ -151,7 +183,7 @@
 
   // Draw
   function draw() {
-    if (!_ctx || !_circuit) return;
+    if (!_ctx || !_circuit || _radius <= 10) return;
     const w = _canvas.width  / (window.devicePixelRatio || 1);
     const h = _canvas.height / (window.devicePixelRatio || 1);
     _ctx.clearRect(0, 0, w, h);
@@ -394,15 +426,22 @@
 
   function onClick(e) {
     const rect = _canvas.getBoundingClientRect();
-    const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const hit = hitTest(x, y, 24);
     _selected  = (hit && hit !== _selected) ? hit : null;
+    updateDetailPanel();
   }
 
   function onTouch(e) {
-    if (!e.touches || !e.touches[0]) return;
+    const touch = e.changedTouches && e.changedTouches[0];
+    if (!touch) return;
     const rect = _canvas.getBoundingClientRect();
-    const hit  = hitTest(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-    _selected  = (hit && hit !== _selected) ? hit : null;
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const hit = hitTest(x, y);
+_selected  = (hit && hit !== _selected) ? hit : null;
+    updateDetailPanel();
   }
 
   function hitTest(x, y) {
@@ -438,9 +477,9 @@
     return null;
   }
 
-  // Tooltip
+  // Tooltip — only show on hover when nothing is selected
   function drawTooltip() {
-    if (!_selected || !_lastState || !_lastState.drivers) return;
+    if (_selected || !_lastState || !_lastState.drivers) return;
     const d = _lastState.drivers[_selected];
     if (!d) return;
 
@@ -539,6 +578,69 @@
     _ctx.textAlign    = 'center';
     _ctx.textBaseline = 'middle';
     _ctx.fillText('REJOIN', pos.x, pos.y + _dotR + 10);
+  }
+
+  // Detail panel
+  function updateDetailPanel() {
+    const panel = document.getElementById('map-detail');
+    if (!panel) return;
+
+    if (!_selected || !_lastState || !_lastState.drivers[_selected]) {
+      panel.innerHTML = '<div class="map-detail-empty">Tap a driver to see details</div>';
+      return;
+    }
+
+    const d     = _lastState.drivers[_selected];
+    const color = d.team_colour ? '#' + d.team_colour.replace('#', '') : '#555';
+    const TYRE_COLOURS = {
+      SOFT: '#e8002d', MEDIUM: '#ffd700', HARD: '#ffffff',
+      INTER: '#39b54a', WET: '#0067ff', UNKNOWN: '#888888'
+    };
+    const tyreColor = TYRE_COLOURS[d.compound] || '#888888';
+
+    panel.innerHTML = `
+      <div class="map-detail-card">
+        <div class="map-detail-header">
+          <div style="width:4px;height:28px;border-radius:2px;background:${color};flex-shrink:0"></div>
+          <div>
+            <div class="map-detail-name">${_selected}</div>
+            <div class="map-detail-team">${d.team || ''}</div>
+          </div>
+          <div class="map-detail-pos">P${d.position || '?'}</div>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">GAP</span>
+          <span class="map-detail-value">${d.gap_to_leader || '-'}</span>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">INTERVAL</span>
+          <span class="map-detail-value">${d.in_pit ? 'IN PIT' : (d.interval || '-')}</span>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">LAST LAP</span>
+          <span class="map-detail-value">${d.last_lap || '-'}</span>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">BEST LAP</span>
+          <span class="map-detail-value">${d.best_lap || '-'}</span>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">TYRE</span>
+          <span class="map-detail-value">
+            <span class="map-detail-tyre-dot" style="background:${tyreColor}"></span>
+            ${d.compound || '?'} - ${d.tyre_life || '?'}L
+          </span>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">STOPS</span>
+          <span class="map-detail-value">${d.pit_stops !== undefined ? d.pit_stops : '-'}</span>
+        </div>
+        <div class="map-detail-row">
+          <span class="map-detail-label">SECTORS</span>
+          <span class="map-detail-value">${d.sector_1 || '-'} / ${d.sector_2 || '-'} / ${d.sector_3 || '-'}</span>
+        </div>
+      </div>
+    `;
   }
 
   // Bootstrap

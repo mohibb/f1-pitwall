@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="timing-tabs" id="timing-tabs">
+    <button class="timing-tab active" id="tab-timing" onclick="switchTab('timing')">TIMING</button>
+    <button class="timing-tab" id="tab-map" onclick="switchTab('map')">MAP</button>
+</div>
 <div class="timing-page">
     <div class="timing-panel">
     <table class="timing-table" id="timing-table">
@@ -25,6 +29,9 @@
     </div>
     <div class="map-panel">
         <canvas id="circle-map-canvas"></canvas>
+        <div class="map-detail" id="map-detail">
+            <div class="map-detail-empty">Tap a driver to see details</div>
+        </div>
     </div>
 </div>
 
@@ -171,4 +178,36 @@ function parseSector(val) {
 }
 </script>
 <script src="/static/js/circle_map.js"></script>
+<script>
+function switchTab(tab) {
+    // Only apply tab switching on mobile
+    if (window.innerWidth > 600) return;
+
+    const timingPanel = document.querySelector('.timing-panel');
+    const mapPanel    = document.querySelector('.map-panel');
+    const tabTiming   = document.getElementById('tab-timing');
+    const tabMap      = document.getElementById('tab-map');
+
+    if (tab === 'timing') {
+        timingPanel.style.display = 'block';
+        mapPanel.style.display    = 'none';
+        tabTiming.classList.add('active');
+        tabMap.classList.remove('active');
+    } else {
+        timingPanel.style.display = 'none';
+        mapPanel.style.display    = 'block';
+        tabTiming.classList.remove('active');
+        tabMap.classList.add('active');
+        setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 50);
+    }
+}
+
+// Reset panel visibility on resize (e.g. rotating phone to landscape)
+window.addEventListener('resize', function () {
+    if (window.innerWidth > 600) {
+        document.querySelector('.timing-panel').style.display = '';
+        document.querySelector('.map-panel').style.display    = '';
+    }
+});
+</script>
 {% endblock %}
