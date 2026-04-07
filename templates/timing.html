@@ -179,6 +179,24 @@ function parseSector(val) {
 </script>
 <script src="/static/js/circle_map.js"></script>
 <script>
+// Timing tower row click — select driver on circle map
+document.getElementById('timing-body').addEventListener('click', function(e) {
+    const row = e.target.closest('tr[data-driver]');
+    if (!row) return;
+    const abbr = row.dataset.driver;
+    if (!window._circleMap) return;
+
+    // Toggle selection
+    const current = window._circleMap.getSelected ? window._circleMap.getSelected() : null;
+    window._circleMap.setSelected(abbr === current ? null : abbr);
+
+    // Highlight selected row
+    document.querySelectorAll('#timing-body tr[data-driver]').forEach(r => {
+        r.classList.toggle('row-selected', r.dataset.driver === abbr && abbr !== current);
+    });
+});
+</script>
+<script>
 function switchTab(tab) {
     // Only apply tab switching on mobile
     if (window.innerWidth > 600) return;

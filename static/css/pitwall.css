@@ -1531,3 +1531,9 @@ body {
     padding: 16px;
     box-sizing: border-box;
 }
+
+/* Timing tower selected row */
+.d-row.row-selected {
+    background: rgba(255, 255, 255, 0.05);
+    outline: 1px solid rgba(255, 255, 255, 0.15);
+}

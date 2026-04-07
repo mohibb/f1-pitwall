@@ -650,6 +650,15 @@ _selected  = (hit && hit !== _selected) ? hit : null;
     init();
   }
 
-  window._circleMap = { fractionToXY: fractionToXY };
+  function setSelected(abbr) {
+    _selected = abbr;
+    updateDetailPanel();
+  }
+
+  function getSelected() {
+    return _selected;
+  }
+
+  window._circleMap = { fractionToXY: fractionToXY, setSelected: setSelected, getSelected: getSelected };
 
 })();
