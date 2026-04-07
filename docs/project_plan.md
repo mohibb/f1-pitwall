@@ -10,16 +10,16 @@
 
 | Phase | Focus | Deliverable |
 |---|---|---|
-| 1 | Foundation | Working server, auth, admin, database |
-| 2 | Data layer | State dict, replay engine, FastF1 integration |
-| 3 | API | All JSON endpoints, polling contract |
-| 4 | Frontend core | Dark theme, nav, layout system |
-| 5 | Pages | All 5 live pages built and connected |
-| 6 | Circle map | Circular track visualisation |
-| 7 | Live timing | SignalRClient, mode switching |
-| 8 | Deployment | Cloudflare tunnel, startup script, hardening |
-| 9 | Live testing | First real race weekend test |
-| 10 | Polish | Bug fixes, mobile, edge cases |
+| [1](#phase-1--foundation) | Foundation | Working server, auth, admin, database |
+| [2](#phase-2--data-layer) | Data layer | State dict, replay engine, FastF1 integration |
+| [3](#phase-3--api) | API | All JSON endpoints, polling contract |
+| [4](#phase-4--frontend-core) | Frontend core | Dark theme, nav, layout system |
+| [5](#phase-5--pages) | Pages | All 5 live pages built and connected |
+| [6](#phase-6--circle-map) | Circle map | Circular track visualisation |
+| [7](#phase-7--live-timing) | Live timing | SignalRClient, mode switching |
+| [8](#phase-8--deployment) | Deployment | Cloudflare tunnel, startup script, hardening |
+| [9](#phase-9--live-testing) | Live testing | First real race weekend test |
+| [10](#phase-10--polish) | Polish | Bug fixes, mobile, edge cases |'''
 
 ---
 
