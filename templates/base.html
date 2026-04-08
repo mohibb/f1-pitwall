@@ -63,6 +63,15 @@
         </ul>
     </nav>
 
+    <!-- IDLE overlay — shown briefly while FastF1 loads after a live session -->
+    <div class="idle-overlay" id="idle-overlay" style="display:none">
+        <div class="idle-overlay-inner">
+            <div class="idle-spinner"></div>
+            <p class="idle-title">Loading session data…</p>
+            <p class="idle-subtitle">FastF1 is processing the completed session</p>
+        </div>
+    </div>
+
     <!-- Main content -->
     <main class="content" id="main-content">
         {% block content %}

@@ -18,6 +18,7 @@ async function poll() {
         window._f1state = state;
 
         updateModeBadge(state.mode);
+        updateIdleOverlay(state.mode);
         updateSessionStrip(state.session);
         updateTrackStatusBanner(state.track_status);
 
@@ -25,6 +26,12 @@ async function poll() {
     } catch (e) {
         console.warn('[poll] fetch failed:', e);
     }
+}
+
+function updateIdleOverlay(mode) {
+    const overlay = document.getElementById('idle-overlay');
+    if (!overlay) return;
+    overlay.style.display = (mode === 'IDLE') ? 'flex' : 'none';
 }
 
 function updateModeBadge(mode) {

@@ -1537,3 +1537,48 @@ body {
     background: rgba(255, 255, 255, 0.05);
     outline: 1px solid rgba(255, 255, 255, 0.15);
 }
+
+/* ── IDLE overlay ─────────────────────────────────────────────────── */
+.idle-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.idle-overlay-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.idle-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #e10600;
+    border-radius: 50%;
+    animation: idle-spin 0.9s linear infinite;
+}
+
+@keyframes idle-spin {
+    to { transform: rotate(360deg); }
+}
+
+.idle-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: #ffffff;
+    margin: 0;
+}
+
+.idle-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+}
