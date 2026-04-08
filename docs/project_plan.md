@@ -336,9 +336,10 @@ poll();
 - LIVE → REPLAY: brief IDLE state (~5s) while FastF1 loads the completed session data
 - IDLE state shown in frontend: "Loading session data..." overlay
 
-### 7.4 Live data recording
-- All raw SignalR messages written to SQLite `timing_history` table during live session
-- Enables future replay from recorded live data (higher fidelity than FastF1 post-session)
+### 7.4 Live data recording *(skipped)*
+- ~~All raw SignalR messages written to SQLite `timing_history` table during live session~~
+- ~~Enables future replay from recorded live data (higher fidelity than FastF1 post-session)~~
+- **Decision:** FastF1 post-session data is sufficient for replay. The `timing_history` table exists in the schema and this can be built later if needed.
 
 ### 7.5 Testing strategy
 - Test with a practice session first (lower stakes than race)

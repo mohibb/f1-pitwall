@@ -254,3 +254,10 @@ REPLAY_SPEED=1.0
 - OAuth / social login
 - Real-time telemetry during live sessions (post-session only)
 - Mobile app (web app is mobile-responsive)
+---
+
+## Phase 7 Decisions
+
+| Decision | Choice | Reason |
+|---|---|---|
+| Sub-phase 7.4 (live data recording) | Skipped | FastF1 post-session data is sufficient for replay. The `timing_history` table already exists in the schema if raw SignalR recording is needed in future. |
