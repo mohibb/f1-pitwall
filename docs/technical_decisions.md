@@ -261,3 +261,5 @@ REPLAY_SPEED=1.0
 | Decision | Choice | Reason |
 |---|---|---|
 | Sub-phase 7.4 (live data recording) | Skipped | FastF1 post-session data is sufficient for replay. The `timing_history` table already exists in the schema if raw SignalR recording is needed in future. |
+
+| Schedule/session detection API | Jolpica (`api.jolpi.ca`) | Ergast is deprecated; Jolpica is the maintained open-source replacement |
