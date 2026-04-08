@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -55,6 +56,7 @@ async def login(
         httponly=True,
         max_age=86400,
         samesite="lax",
+        secure=os.getenv("ENVIRONMENT", "development") == "production",
     )
     return resp
 
