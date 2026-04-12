@@ -10,3 +10,6 @@
 
 ## Phase 9 Design Notes
 - [ ] 9.1 Click-to-compare gaps: use end-of-lap gap values (not mid-lap) for comparison — gaps should be derived from completed lap data only. If selected driver is in pit lane, fall back to gap-to-leader until they rejoin.
+
+## Done in Phase 9
+- [x] Timing page renamed to Dashboard in nav
