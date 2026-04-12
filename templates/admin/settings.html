@@ -14,16 +14,20 @@
                 Pit stop duration (seconds)
                 <span class="setting-hint">Used when FastF1 has no pit out time. Typical: 23-30s depending on circuit pit lane length.</span>
             </label>
-            <input
-                class="setting-input"
-                type="number"
-                id="pit_stop_duration"
-                name="pit_stop_duration"
-                value="{{ settings.get('pit_stop_duration', '25') }}"
-                min="15"
-                max="60"
-                step="1"
-            >
+            <div class="seek-row">
+                <input
+                    class="setting-input"
+                    type="number"
+                    id="pit_stop_duration"
+                    name="pit_stop_duration"
+                    value="{{ settings.get('pit_stop_duration', '25') }}"
+                    min="15"
+                    max="60"
+                    step="1"
+                >
+                <button class="seek-btn" type="button" id="calc-pit-btn">Calculate from practice</button>
+                <span id="calc-pit-status" class="seek-status"></span>
+            </div>
         </div>
 
         <div class="setting-row">
@@ -91,6 +95,33 @@
 </style>
 
 <script>
+const calcPitBtn = document.getElementById('calc-pit-btn');
+if (calcPitBtn) {
+    calcPitBtn.addEventListener('click', async () => {
+        const status = document.getElementById('calc-pit-status');
+        const input  = document.getElementById('pit_stop_duration');
+        calcPitBtn.disabled = true;
+        status.textContent = 'Loading practice data...';
+        status.style.color = '#888';
+        try {
+            const res  = await fetch('/api/admin/calculate-pit-duration');
+            const data = await res.json();
+            if (res.ok) {
+                input.value = data.estimated_pit_duration;
+                status.textContent = data.note;
+                status.style.color = '#27ae60';
+            } else {
+                status.textContent = data.detail || 'Failed.';
+                status.style.color = '#e8002d';
+            }
+        } catch (e) {
+            status.textContent = 'Request failed.';
+            status.style.color = '#e8002d';
+        }
+        calcPitBtn.disabled = false;
+    });
+}
+
 const seekBtn = document.getElementById('seek-btn');
 if (seekBtn) {
     seekBtn.addEventListener('click', async () => {

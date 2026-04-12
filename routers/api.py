@@ -2,7 +2,8 @@ import os
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+import fastf1
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from auth import get_current_user, require_admin
@@ -75,6 +76,63 @@ async def health():
         "uptime_seconds": uptime_seconds,
         "last_update": datetime.now(timezone.utc).isoformat(),
         "cache_size_mb": _cache_size_mb(),
+    }
+
+
+@router.get("/admin/calculate-pit-duration")
+async def calculate_pit_duration(request: Request, current_user=Depends(require_admin)):
+    """Load FP1/FP2 for the current round and estimate pit lane travel time."""
+    state = get_state()
+    session_info = state.get("session", {})
+    year = session_info.get("year")
+    round_number = session_info.get("round")
+
+    if not year or not round_number:
+        raise HTTPException(status_code=400, detail="No active session found.")
+
+    errors = []
+    min_pit_time = None
+
+    for session_type in ["FP1", "FP2", "FP3"]:
+        try:
+            import pandas as pd
+            session = fastf1.get_session(year, round_number, session_type)
+            session.load(laps=True, telemetry=False, weather=False, messages=False)
+            laps = session.laps
+
+            # Use consecutive lap approach: PitOutTime of next lap - PitInTime of current lap
+            pit_durations = []
+            for driver in laps["Driver"].unique():
+                drv_laps = laps[laps["Driver"] == driver].sort_values("LapNumber").reset_index(drop=True)
+                for i in range(len(drv_laps) - 1):
+                    pit_in  = drv_laps.iloc[i]["PitInTime"]
+                    pit_out = drv_laps.iloc[i+1]["PitOutTime"]
+                    if pd.isna(pit_in) or pd.isna(pit_out):
+                        continue
+                    duration = (pit_out - pit_in).total_seconds()
+                    # Only keep realistic pit stops (not garage sits)
+                    # Min 20s excludes drive-throughs / no-work pit entries
+                    if 20 < duration < 60:
+                        pit_durations.append(duration)
+
+            if not pit_durations:
+                continue
+            session_min = min(pit_durations)
+            if min_pit_time is None or session_min < min_pit_time:
+                min_pit_time = session_min
+        except Exception as e:
+            errors.append(f"{session_type}: {str(e)}")
+            continue
+
+    if min_pit_time is None:
+        raise HTTPException(status_code=404, detail=f"No pit data found. {' '.join(errors)}")
+
+    estimated = max(15, round(min_pit_time))
+
+    return {
+        "estimated_pit_duration": int(estimated),
+        "min_raw_pit_time": round(min_pit_time, 1),
+        "note": f"Based on fastest pit stop in practice (raw: {min_pit_time:.1f}s). Adjust if needed."
     }
 
 
