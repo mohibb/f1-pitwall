@@ -1586,3 +1586,10 @@ body {
 /* 9.2 — Gap trend colours */
 .gap-closing { color: var(--green) !important; }
 .gap-growing  { color: var(--accent) !important; }
+
+/* 9.4 — Stint average lap time in tyre badge */
+.stint-avg {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-left: 0.2rem;
+}

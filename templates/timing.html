@@ -169,6 +169,7 @@ document.addEventListener('f1:update', (e) => {
                 <span class="tyre-dot" style="background:${compoundColour}"></span>
                 <span class="tyre-label mono" style="color:${compoundColour}">${compoundInitial}</span>
                 <span class="tyre-age mono muted">${d.tyre_life != null ? d.tyre_life : '—'}</span>
+                ${d.stint_avg_lap ? `<span class="stint-avg mono">${d.stint_avg_lap}</span>` : ''}
             </td>
             <td class="col-sector mono ${sectorClass(d.sector_1, sorted, 'sector_1')}">${d.sector_1 || '—'}</td>
             <td class="col-sector mono ${sectorClass(d.sector_2, sorted, 'sector_2')}">${d.sector_2 || '—'}</td>

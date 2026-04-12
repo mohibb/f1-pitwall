@@ -131,6 +131,28 @@ class ReplayEngine:
             ds["compound"]     = lap["compound"]
             ds["tyre_life"]    = lap["tyre_life"]
             ds["fresh_tyre"]   = lap["fresh_tyre"]
+
+            # Reset stint lap times on new stint
+            prev_stint = ds.get("stint", 1)
+            new_stint  = lap.get("stint", prev_stint)
+            if new_stint != prev_stint:
+                ds["_stint_lap_times"] = []
+
+            # Accumulate lap time for stint average (parse "M:SS.mmm" -> seconds)
+            lap_time_str = lap.get("lap_time")
+            if lap_time_str:
+                try:
+                    parts = lap_time_str.split(":")
+                    lap_secs = int(parts[0]) * 60 + float(parts[1])
+                    if lap_secs > 0:
+                        ds["_stint_lap_times"].append(lap_secs)
+                        avg = sum(ds["_stint_lap_times"]) / len(ds["_stint_lap_times"])
+                        m = int(avg // 60)
+                        s = avg % 60
+                        ds["stint_avg_lap"] = f"{m}:{s:06.3f}"
+                except (ValueError, IndexError):
+                    pass
+
             ds["stint"]        = lap["stint"]
             ds["sector_1"]     = lap["sector_1"]
             ds["sector_2"]     = lap["sector_2"]
@@ -263,6 +285,7 @@ class ReplayEngine:
                 "team":          ds["team"],
                 "team_colour":   ds["team_colour"],
                 "gap_history":   ds.get("gap_history", []),
+                "stint_avg_lap": ds.get("stint_avg_lap"),
             }
 
         current_lap = max(
@@ -378,6 +401,8 @@ class ReplayEngine:
             "lap_fraction": 0.0,
             "track_status": "1",
             "gap_history":  [],
+            "stint_avg_lap": None,
+            "_stint_lap_times": [],
         }
 
     @staticmethod
