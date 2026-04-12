@@ -48,6 +48,8 @@ const COMPOUND_COLOURS = {
 const _prevPositions = {};
 const _prevLapTimes  = {};
 let _initialised = false;
+let _selectedDriver = null;
+let _prevGaps = {};
 
 document.addEventListener('f1:update', (e) => {
     const drivers = e.detail.drivers;
@@ -114,7 +116,7 @@ document.addEventListener('f1:update', (e) => {
             </td>
             <td class="col-lap mono ${lapFlash}">${d.last_lap || '—'}</td>
             <td class="col-lap mono muted">${d.best_lap || '—'}</td>
-            <td class="col-gap mono">${fmtGap(d.gap_to_leader)}</td>
+            <td class="col-gap mono" data-gap="${d.gap_to_leader}">${fmtRelGap(abbr, d, sorted, drivers)}</td>
             <td class="col-gap mono muted">${fmtGap(d.interval)}</td>
             <td class="col-tyre">
                 <span class="tyre-dot" style="background:${compoundColour}"></span>
@@ -154,6 +156,41 @@ function fmtGap(val) {
     return val;
 }
 
+function parseGapSeconds(val) {
+    if (!val || val === 'leader') return null;
+    const n = parseFloat(val.replace('+', ''));
+    return isNaN(n) ? null : n;
+}
+
+function fmtRelGap(abbr, d, sorted, drivers) {
+    // If no driver selected, show normal gap
+    if (!_selectedDriver || _selectedDriver === abbr) {
+        return abbr === _selectedDriver ? '<span style="color:var(--sc-yellow)">REF</span>' : fmtGap(d.gap_to_leader);
+    }
+
+    const refDriver = drivers[_selectedDriver];
+    if (!refDriver) return fmtGap(d.gap_to_leader);
+
+    // If selected driver is in pit, fall back to gap-to-leader display
+    if (refDriver.in_pit) return fmtGap(d.gap_to_leader);
+
+    const myGap  = parseGapSeconds(d.gap_to_leader);
+    const refGap = parseGapSeconds(refDriver.gap_to_leader);
+
+    // Leader row
+    if (d.gap_to_leader === 'leader') {
+        if (refGap === null) return 'LEADER';
+        const diff = 0 - refGap;
+        return diff >= 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3);
+    }
+
+    if (myGap === null || refGap === null) return fmtGap(d.gap_to_leader);
+
+    const diff = myGap - refGap;
+    if (Math.abs(diff) < 0.001) return '+0.000';
+    return diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3);
+}
+
 function sectorClass(val, sorted, field) {
     if (!val) return '';
     const times = sorted
@@ -179,21 +216,25 @@ function parseSector(val) {
 </script>
 <script src="/static/js/circle_map.js"></script>
 <script>
-// Timing tower row click — select driver on circle map
+// Timing tower row click — gap compare + circle map select
 document.getElementById('timing-body').addEventListener('click', function(e) {
     const row = e.target.closest('tr[data-driver]');
     if (!row) return;
     const abbr = row.dataset.driver;
-    if (!window._circleMap) return;
 
-    // Toggle selection
-    const current = window._circleMap.getSelected ? window._circleMap.getSelected() : null;
-    window._circleMap.setSelected(abbr === current ? null : abbr);
+    // Toggle selected driver for gap comparison
+    const wasSelected = _selectedDriver === abbr;
+    _selectedDriver = wasSelected ? null : abbr;
 
     // Highlight selected row
     document.querySelectorAll('#timing-body tr[data-driver]').forEach(r => {
-        r.classList.toggle('row-selected', r.dataset.driver === abbr && abbr !== current);
+        r.classList.toggle('row-selected', r.dataset.driver === _selectedDriver);
     });
+
+    // Also sync circle map if available
+    if (window._circleMap && window._circleMap.setSelected) {
+        window._circleMap.setSelected(_selectedDriver);
+    }
 });
 </script>
 <script>
