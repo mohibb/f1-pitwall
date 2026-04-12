@@ -13,3 +13,6 @@
 
 ## Done in Phase 9
 - [x] Timing page renamed to Dashboard in nav
+
+## Phase 11 additions
+- [ ] Static offline page on Cloudflare Pages (e.g. mohibb.com or status.mohibb.com) showing "F1 Pit Wall is offline" + next race weekend date
