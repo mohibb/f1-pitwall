@@ -52,6 +52,10 @@ async def init_db():
             INSERT OR IGNORE INTO settings (key, value) VALUES ('pit_stop_duration', '25')
         """)
 
+        await db.execute("""
+            INSERT OR REPLACE INTO settings (key, value) VALUES ('replay_speed', '1')
+        """)
+
         await db.commit()
         await _seed_admin(db)
 

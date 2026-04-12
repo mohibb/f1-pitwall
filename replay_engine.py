@@ -47,6 +47,11 @@ class ReplayEngine:
               f"max_time={self._max_time:.0f}s")
 
     def tick(self) -> None:
+        # Read speed multiplier from settings on each tick so changes take effect immediately
+        try:
+            self.speed = float(get_setting_sync("replay_speed", "1"))
+        except (ValueError, TypeError):
+            self.speed = 1.0
         self.simulated_time += self.tick_interval * self.speed
 
         if self.simulated_time > self._max_time:

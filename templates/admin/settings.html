@@ -27,6 +27,23 @@
         </div>
 
         <div class="setting-row">
+            <label class="setting-label" for="replay_speed">
+                Replay speed
+                <span class="setting-hint">Speed multiplier for replay. 1x = real time (~90 min). 5x = ~18 min. 10x = ~9 min. Use higher values for testing only.</span>
+            </label>
+            <select
+                class="setting-input"
+                id="replay_speed"
+                name="replay_speed"
+                style="width:100px"
+            >
+                {% for val in ['1', '2', '5', '10'] %}
+                <option value="{{ val }}" {% if settings.get('replay_speed', '1') == val %}selected{% endif %}>{{ val }}x</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="setting-row">
             <label class="setting-label" for="seek-lap-input">
                 Replay seek
                 <span class="setting-hint">Jump to a specific lap in the current replay session.</span>
