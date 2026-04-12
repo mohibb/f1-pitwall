@@ -4,6 +4,7 @@ BASE_URL="http://localhost:8000"
 PASS="✅"
 FAIL="❌"
 ALL_GOOD=true
+COOKIE_JAR="/tmp/f1_preflight_cookies.txt"
 
 echo ""
 echo "═══════════════════════════════════"
@@ -52,29 +53,24 @@ fi
 echo "   Uptime: $UPTIME"
 echo "   Last update: $LAST_UPDATE"
 
-# 5. /api/state responds
-STATE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/state" \
-    -H "Cookie: access_token=$(curl -s -c /tmp/f1_cookies.txt -b /tmp/f1_cookies.txt \
-    -X POST "$BASE_URL/auth/login" \
-    -d 'username=mohibb&password=f1-password123' \
-    -H 'Content-Type: application/x-www-form-urlencoded' \
-    -L -o /dev/null -w '%{http_code}')")
-
-# Simpler: just login first, then hit /api/state
-curl -s -c /tmp/f1_preflight_cookies.txt \
-    -X POST "$BASE_URL/auth/login" \
-    -d "username=mohibb&password=f1-password123" \
+# 5. Login to get cookie
+rm -f "$COOKIE_JAR"
+LOGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -c "$COOKIE_JAR" \
+    -X POST "$BASE_URL/login" \
+    -d "username=mohibb&password=f1pitwall2026" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -L -o /dev/null
+    -L)
 
+# 6. /api/state with cookie
 STATE=$(curl -s -o /dev/null -w "%{http_code}" \
-    -b /tmp/f1_preflight_cookies.txt \
+    -b "$COOKIE_JAR" \
     "$BASE_URL/api/state")
 
 if [ "$STATE" = "200" ]; then
     echo "$PASS /api/state responded 200"
 else
-    echo "$FAIL /api/state returned $STATE"
+    echo "$FAIL /api/state returned $STATE (login status: $LOGIN_STATUS)"
     ALL_GOOD=false
 fi
 
@@ -89,5 +85,4 @@ fi
 echo "───────────────────────────────────"
 echo ""
 
-# Cleanup
-rm -f /tmp/f1_preflight_cookies.txt
+rm -f "$COOKIE_JAR"
