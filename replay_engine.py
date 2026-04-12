@@ -35,6 +35,7 @@ class ReplayEngine:
         self._lap_times: dict[str, list[float]] = defaultdict(list)
         self._rc_emitted: list[dict] = []
         self._applied_laps: set[int] = set()
+        self._fastest_lap_secs: float | None = None  # overall fastest lap seconds
 
         self._max_time = max(
             (l["session_time"] for l in self.laps if l["session_time"]),
@@ -127,6 +128,14 @@ class ReplayEngine:
 
             if lap["lap_time"]:
                 ds["last_lap"] = lap["lap_time"]
+                # Track overall fastest lap
+                try:
+                    parts = lap["lap_time"].split(":")
+                    lap_secs = int(parts[0]) * 60 + float(parts[1])
+                    if self._fastest_lap_secs is None or lap_secs < self._fastest_lap_secs:
+                        self._fastest_lap_secs = lap_secs
+                except (ValueError, IndexError):
+                    pass
             ds["lap_number"]   = lap["lap_number"]
             ds["compound"]     = lap["compound"]
             ds["tyre_life"]    = lap["tyre_life"]
@@ -252,6 +261,18 @@ class ReplayEngine:
             abbr = ds["abbreviation"]
             gap, interval = self._compute_gaps(ds, positions, leader_lap_time)
 
+            # Compute delta to fastest lap (only after lap 3+)
+            if self._fastest_lap_secs and ds.get("best_lap") and ds.get("lap_number", 0) >= 3:
+                try:
+                    parts = ds["best_lap"].split(":")
+                    best_secs = int(parts[0]) * 60 + float(parts[1])
+                    delta = best_secs - self._fastest_lap_secs
+                    ds["delta_to_fastest"] = f"+{delta:.3f}" if delta >= 0 else f"{delta:.3f}"
+                except (ValueError, IndexError):
+                    ds["delta_to_fastest"] = None
+            else:
+                ds["delta_to_fastest"] = None
+
             # Append to gap_history on each new lap completion
             prev_lap = ds.get("_last_recorded_lap")
             curr_lap = ds.get("lap_number")
@@ -286,6 +307,7 @@ class ReplayEngine:
                 "team_colour":   ds["team_colour"],
                 "gap_history":   ds.get("gap_history", []),
                 "stint_avg_lap": ds.get("stint_avg_lap"),
+                "delta_to_fastest": ds.get("delta_to_fastest"),
             }
 
         current_lap = max(
@@ -403,6 +425,7 @@ class ReplayEngine:
             "gap_history":  [],
             "stint_avg_lap": None,
             "_stint_lap_times": [],
+            "delta_to_fastest": None,
         }
 
     @staticmethod

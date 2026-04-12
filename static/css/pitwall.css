@@ -1593,3 +1593,6 @@ body {
     color: var(--muted);
     margin-left: 0.2rem;
 }
+
+/* 9.5 — Delta to fastest lap column */
+.col-delta { min-width: 70px; }

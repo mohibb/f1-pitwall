@@ -20,6 +20,7 @@
                 <th class="col-sector">S2</th>
                 <th class="col-sector">S3</th>
                 <th class="col-pits">PITS</th>
+                <th class="col-delta">FAST</th>
             </tr>
         </thead>
         <tbody id="timing-body">
@@ -175,6 +176,7 @@ document.addEventListener('f1:update', (e) => {
             <td class="col-sector mono ${sectorClass(d.sector_2, sorted, 'sector_2')}">${d.sector_2 || '—'}</td>
             <td class="col-sector mono ${sectorClass(d.sector_3, sorted, 'sector_3')}">${d.sector_3 || '—'}</td>
             <td class="col-pits mono muted">${d.pit_stops != null ? d.pit_stops : '—'}</td>
+            <td class="col-delta mono ${d.delta_to_fastest ? '' : 'muted'}">${d.delta_to_fastest || '—'}</td>
         `;
 
         if (isNew) {
