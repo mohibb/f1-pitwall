@@ -1,0 +1,93 @@
+#!/bin/bash
+
+BASE_URL="http://localhost:8000"
+PASS="✅"
+FAIL="❌"
+ALL_GOOD=true
+
+echo ""
+echo "═══════════════════════════════════"
+echo "   F1 Pit Wall — Preflight Check   "
+echo "═══════════════════════════════════"
+echo ""
+
+# 1. Server running
+if pgrep -f "uvicorn" > /dev/null; then
+    echo "$PASS Server is running"
+else
+    echo "$FAIL Server is NOT running — run: bash start.sh"
+    ALL_GOOD=false
+fi
+
+# 2. Cloudflare tunnel running
+if pgrep -f "cloudflared" > /dev/null; then
+    echo "$PASS Cloudflare tunnel is active"
+else
+    echo "$FAIL Cloudflare tunnel is NOT running"
+    ALL_GOOD=false
+fi
+
+# 3. /api/health responds
+HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/health")
+if [ "$HEALTH" = "200" ]; then
+    echo "$PASS /api/health responded 200"
+else
+    echo "$FAIL /api/health returned $HEALTH"
+    ALL_GOOD=false
+fi
+
+# 4. /api/health details
+HEALTH_BODY=$(curl -s "$BASE_URL/api/health")
+MODE=$(echo "$HEALTH_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('mode','unknown'))" 2>/dev/null)
+UPTIME=$(echo "$HEALTH_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('uptime','unknown'))" 2>/dev/null)
+LAST_UPDATE=$(echo "$HEALTH_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('last_update','unknown'))" 2>/dev/null)
+
+if [ -n "$MODE" ] && [ "$MODE" != "unknown" ]; then
+    echo "$PASS Mode: $MODE"
+else
+    echo "$FAIL Could not read mode from /api/health"
+    ALL_GOOD=false
+fi
+
+echo "   Uptime: $UPTIME"
+echo "   Last update: $LAST_UPDATE"
+
+# 5. /api/state responds
+STATE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/state" \
+    -H "Cookie: access_token=$(curl -s -c /tmp/f1_cookies.txt -b /tmp/f1_cookies.txt \
+    -X POST "$BASE_URL/auth/login" \
+    -d 'username=mohibb&password=f1-password123' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -L -o /dev/null -w '%{http_code}')")
+
+# Simpler: just login first, then hit /api/state
+curl -s -c /tmp/f1_preflight_cookies.txt \
+    -X POST "$BASE_URL/auth/login" \
+    -d "username=mohibb&password=f1-password123" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -L -o /dev/null
+
+STATE=$(curl -s -o /dev/null -w "%{http_code}" \
+    -b /tmp/f1_preflight_cookies.txt \
+    "$BASE_URL/api/state")
+
+if [ "$STATE" = "200" ]; then
+    echo "$PASS /api/state responded 200"
+else
+    echo "$FAIL /api/state returned $STATE"
+    ALL_GOOD=false
+fi
+
+# Summary
+echo ""
+echo "───────────────────────────────────"
+if [ "$ALL_GOOD" = true ]; then
+    echo "   ✅ All checks passed. Good to go!"
+else
+    echo "   ❌ Some checks failed. Fix before session."
+fi
+echo "───────────────────────────────────"
+echo ""
+
+# Cleanup
+rm -f /tmp/f1_preflight_cookies.txt
