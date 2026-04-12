@@ -229,6 +229,21 @@ class ReplayEngine:
         for ds in self._driver_state.values():
             abbr = ds["abbreviation"]
             gap, interval = self._compute_gaps(ds, positions, leader_lap_time)
+
+            # Append to gap_history on each new lap completion
+            prev_lap = ds.get("_last_recorded_lap")
+            curr_lap = ds.get("lap_number")
+            if curr_lap and curr_lap != prev_lap:
+                try:
+                    gap_val = float(gap.replace("+", "")) if gap not in ("leader", "—") else 0.0
+                except (ValueError, AttributeError):
+                    gap_val = None
+                if gap_val is not None:
+                    history = ds.get("gap_history", [])
+                    history = (history + [gap_val])[-10:]
+                    ds["gap_history"] = history
+                    ds["_last_recorded_lap"] = curr_lap
+
             drivers_patch[abbr] = {
                 "position":      ds["position"],
                 "last_lap":      ds["last_lap"],
@@ -247,6 +262,7 @@ class ReplayEngine:
                 "lap_fraction":  ds["lap_fraction"],
                 "team":          ds["team"],
                 "team_colour":   ds["team_colour"],
+                "gap_history":   ds.get("gap_history", []),
             }
 
         current_lap = max(
@@ -361,6 +377,7 @@ class ReplayEngine:
             "in_pit":       False,
             "lap_fraction": 0.0,
             "track_status": "1",
+            "gap_history":  [],
         }
 
     @staticmethod

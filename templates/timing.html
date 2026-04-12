@@ -163,7 +163,7 @@ document.addEventListener('f1:update', (e) => {
             </td>
             <td class="col-lap mono ${lapFlash}">${d.last_lap || '—'}</td>
             <td class="col-lap mono muted">${d.best_lap || '—'}</td>
-            <td class="col-gap mono ${(_selectedDriver && _selectedDriver !== abbr) ? (_relTrend[abbr] || '') : (_gapTrend[abbr] || '')}" data-gap="${d.gap_to_leader}">${fmtRelGap(abbr, d, sorted, drivers)}</td>
+            <td class="col-gap mono ${(_selectedDriver && _selectedDriver !== abbr) ? (_relTrend[abbr] || '') : (_gapTrend[abbr] || '')}" data-gap="${d.gap_to_leader}" style="white-space:nowrap">${fmtRelGap(abbr, d, sorted, drivers)}${sparkline(d.gap_history)}</td>
             <td class="col-gap mono ${_intTrend[abbr] || ''}">${fmtGap(d.interval)}</td>
             <td class="col-tyre">
                 <span class="tyre-dot" style="background:${compoundColour}"></span>
@@ -197,6 +197,21 @@ document.addEventListener('f1:update', (e) => {
         if (!drivers[abbr]) existingRows[abbr].remove();
     });
 });
+
+function sparkline(history) {
+    if (!history || history.length < 2) return '';
+    const W = 40, H = 16, pad = 1;
+    const min = Math.min(...history);
+    const max = Math.max(...history);
+    const range = max - min || 1;
+    const pts = history.map((v, i) => {
+        const x = pad + (i / (history.length - 1)) * (W - pad * 2);
+        const y = pad + ((v - min) / range) * (H - pad * 2);
+        // Invert Y: lower gap = higher on chart (better)
+        return `${x.toFixed(1)},${(H - y).toFixed(1)}`;
+    });
+    return `<svg width="${W}" height="${H}" style="vertical-align:middle;margin-left:4px" viewBox="0 0 ${W} ${H}"><polyline points="${pts.join(' ')}" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+}
 
 function fmtGap(val) {
     if (!val || val === 'leader') return val === 'leader' ? 'LEADER' : '—';
