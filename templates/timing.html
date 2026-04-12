@@ -50,6 +50,10 @@ const _prevLapTimes  = {};
 let _initialised = false;
 let _selectedDriver = null;
 let _prevGaps = {};
+let _gapLastVal  = {};   // abbr -> last distinct gap seconds
+let _gapTrend    = {};   // abbr -> 'gap-closing' | 'gap-growing' | ''
+let _intLastVal  = {};   // abbr -> last distinct interval seconds
+let _intTrend    = {};   // abbr -> 'gap-closing' | 'gap-growing' | ''
 
 document.addEventListener('f1:update', (e) => {
     const drivers = e.detail.drivers;
@@ -97,6 +101,28 @@ document.addEventListener('f1:update', (e) => {
         }
         _prevLapTimes[abbr] = d.last_lap;
 
+        // Track gap trend — compare each new distinct value to the previous distinct value
+        const rawGap = parseGapSeconds(d.gap_to_leader);
+        if (rawGap !== null) {
+            const prev = _gapLastVal[abbr];
+            if (prev !== undefined && Math.abs(rawGap - prev) > 0.1) {
+                _gapTrend[abbr] = rawGap < prev ? 'gap-closing' : 'gap-growing';
+            }
+            if (prev === undefined || Math.abs(rawGap - prev) > 0.001) {
+                _gapLastVal[abbr] = rawGap;
+            }
+        }
+        const rawInt = parseGapSeconds(d.interval);
+        if (rawInt !== null) {
+            const prev = _intLastVal[abbr];
+            if (prev !== undefined && Math.abs(rawInt - prev) > 0.1) {
+                _intTrend[abbr] = rawInt < prev ? 'gap-closing' : 'gap-growing';
+            }
+            if (prev === undefined || Math.abs(rawInt - prev) > 0.001) {
+                _intLastVal[abbr] = rawInt;
+            }
+        }
+
         const compound = (d.compound || 'UNKNOWN').toUpperCase();
         const compoundColour = COMPOUND_COLOURS[compound] || '#888888';
         const compoundInitial = compound === 'INTER' ? 'I' : compound === 'UNKNOWN' ? '?' : compound[0];
@@ -116,8 +142,8 @@ document.addEventListener('f1:update', (e) => {
             </td>
             <td class="col-lap mono ${lapFlash}">${d.last_lap || '—'}</td>
             <td class="col-lap mono muted">${d.best_lap || '—'}</td>
-            <td class="col-gap mono" data-gap="${d.gap_to_leader}">${fmtRelGap(abbr, d, sorted, drivers)}</td>
-            <td class="col-gap mono muted">${fmtGap(d.interval)}</td>
+            <td class="col-gap mono ${_gapTrend[abbr] || ''}" data-gap="${d.gap_to_leader}">${fmtRelGap(abbr, d, sorted, drivers)}</td>
+            <td class="col-gap mono ${_intTrend[abbr] || ''}">${fmtGap(d.interval)}</td>
             <td class="col-tyre">
                 <span class="tyre-dot" style="background:${compoundColour}"></span>
                 <span class="tyre-label mono" style="color:${compoundColour}">${compoundInitial}</span>
