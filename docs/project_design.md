@@ -34,7 +34,7 @@ A personal F1 pit wall web app and API. Authenticated users (read-only) view liv
 | Data store | In-memory dict + SQLite | In-memory for speed, SQLite for persistence and future replay |
 | Auth | JWT in HTTP-only cookies | Secure, no JS-accessible tokens |
 | Frontend | Jinja2 + Vanilla JS | No framework overhead, simple polling loop |
-| Polling | HTTP GET `/api/state` every 3–5s | Simple, reliable, sufficient for F1 timing cadence |
+| Polling | HTTP GET `/api/state` every 1s | Simple, reliable, sufficient for F1 timing cadence |
 | Tunnel | Cloudflare Tunnel (`cloudflared`) | No port forwarding, free HTTPS, hides home IP |
 | Server | Uvicorn | ASGI server for FastAPI |
 
@@ -99,7 +99,7 @@ while in_replay_mode:
     simulated_time += tick_interval * speed_multiplier
     events = get_all_events_before(simulated_time)
     update_shared_state(events)
-    sleep(tick_interval)  # 3 seconds
+    sleep(tick_interval)  # 1 second
 ```
 
 **Speed multiplier:** configurable by admin. Default `1x` (real time, ~90 min loop).
@@ -151,6 +151,8 @@ Both LIVE and REPLAY write to the same structure. The frontend only ever reads t
       "best_lap": "1:20.891",
       "gap_to_leader": "leader",
       "interval": "+0.000",
+      "gap_history": [],
+      "stint_avg_lap": "1:21.891",
       "compound": "MEDIUM",
       "tyre_life": 18,
       "tyre_new": false,
@@ -223,7 +225,6 @@ estimated_lap_time = rolling average of driver's last 3 clean laps
 | Pit lane zone | Notch/gap on circle (~5°) | Fixed position |
 | Driver in pit | Dot inside pit zone | `in_pit` flag |
 | Sector boundaries | Arc dividers (S1/S2/S3) | Sector session times |
-| DRS zones | Green arc segments | Circuit-specific, hardcoded per track |
 | SC/VSC active | Circle outline pulses yellow/orange | `track_status` |
 | Pit stop window | Shaded arc behind a driver | Computed from `avg_pit_loss` |
 | Ghost dot (rejoin) | Faded dot, dashed outline | Computed rejoin position |
@@ -256,7 +257,11 @@ If the car behind is inside this arc, they are "in the undercut window."
 - Position, driver abbreviation, team colour bar
 - Last lap time, best lap time
 - Gap to leader, interval to car ahead
-- Tyre compound colour + tyre age (laps)
+- Click driver to pin as comparison reference — all gaps shown relative to selected driver
+- Gap trend colour coding: green (closing), red (growing), white (stable)
+- Gap history sparkline: inline SVG showing last 10 laps of gap trend
+- Tyre compound colour + tyre age (laps) + stint average lap time
+- Delta to fastest lap of race
 - Pit stop count
 - Sector times (S1 / S2 / S3), colour coded (purple / green / yellow)
 - In-pit indicator
@@ -265,7 +270,6 @@ If the car behind is inside this arc, they are "in the undercut window."
 - All drivers as coloured dots on the circle
 - Pit lane zone
 - Sector arcs
-- DRS zone arcs
 - SC/VSC pulse
 - Pit window arcs on hover/tap
 - Ghost rejoin dot on hover/tap
@@ -308,7 +312,6 @@ They require full telemetry data which is only available after a session ends.
 - Throttle overlay
 - Brake overlay
 - Gear trace
-- DRS activation zones
 - Mini delta chart (time gain/loss across distance)
 
 ### Page 7 — Driver Deep Dive
@@ -394,7 +397,7 @@ f1-pitwall/
 │   ├── css/
 │   │   └── pitwall.css         # Dark theme, monospace fonts, layout
 │   └── js/
-│       ├── poll.js             # 3s polling loop, DOM update logic
+│       ├── poll.js             # 1s polling loop, DOM update logic
 │       └── circle_map.js       # Canvas/SVG circle map rendering
 ├── f1_cache/                   # FastF1 cache directory
 ├── f1_data.db                  # SQLite database (users + timing history)
@@ -422,7 +425,7 @@ f1-pitwall/
 | GET | `/admin/users` | Admin | User management |
 | POST | `/admin/users/create` | Admin | Create user |
 | POST | `/admin/users/delete` | Admin | Delete user |
-| GET | `/api/state` | Yes | Current full state JSON (polled every 3s) |
+| GET | `/api/state` | Yes | Current full state JSON (polled every 1s) |
 | GET | `/api/schedule` | Yes | Season schedule JSON |
 | GET | `/api/health` | No | Server health check |
 
@@ -478,7 +481,7 @@ async function poll() {
     updateSessionInfo(state.session);
 }
 
-setInterval(poll, 3000);
+setInterval(poll, 1000);
 poll(); // immediate first call
 ```
 
@@ -487,15 +490,17 @@ poll(); // immediate first call
 ## Requirements
 
 ```
-fastapi
+fastapi==0.109.2
+starlette==0.36.3
+jinja2==3.1.3
 uvicorn[standard]
 fastf1
 pandas
 numpy
 passlib[bcrypt]
+bcrypt==4.0.1
 python-jose[cryptography]
 slowapi
-jinja2
 python-multipart
 aiosqlite
 python-dotenv
@@ -517,6 +522,7 @@ python-dotenv
 10. Live timing — SignalRClient integration (test on next race weekend)
 11. Cloudflare tunnel config + startup script
 12. Admin UI — user management page
+13. Timing tower enhancements — gap comparisons, sparklines, stint pace, delta to fastest lap
 
 ---
 

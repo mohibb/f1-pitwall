@@ -18,8 +18,9 @@
 | [6](#phase-6--circle-map) | Circle map | Circular track visualisation |
 | [7](#phase-7--live-timing) | Live timing | SignalRClient, mode switching |
 | [8](#phase-8--deployment) | Deployment | Cloudflare tunnel, startup script, hardening |
-| [9](#phase-9--live-testing) | Live testing | First real race weekend test |
-| [10](#phase-10--polish) | Polish | Bug fixes, mobile, edge cases |'''
+| [9](#phase-9--timing-tower-enhancements) | Timing tower enhancements | Gap comparisons, sparklines, stint pace |
+| [10](#phase-10--live-race-test) | Live race test | First real race weekend test |
+| [11](#phase-11--polish) | Polish | Bug fixes, mobile, edge cases |
 
 ---
 
@@ -101,11 +102,11 @@
 - `session_manager.py` — class `SessionManager`, runs as a background thread
 - On startup: check for live session → if none, load last race → start replay
 - Exposes current mode: `LIVE` / `REPLAY` / `IDLE`
-- Calls `ReplayEngine.tick()` every 3 seconds in replay mode
+- Calls `ReplayEngine.tick()` every 1 second in replay mode
 - Placeholder for live mode (Phase 7)
 - Started in `main.py` lifespan using `asyncio` or `threading`
 
-**Phase 2 done when:** Server starts, automatically loads the last completed race, and the in-memory state dict updates every 3 seconds with simulated timing data. Verifiable via a debug print or `/api/state` stub.
+**Phase 2 done when:** Server starts, automatically loads the last completed race, and the in-memory state dict updates every second with simulated timing data. Verifiable via a debug print or `/api/state` stub.
 
 ---
 
@@ -116,7 +117,7 @@
 ### 3.1 `/api/state`
 - Returns full state dict as JSON
 - Auth required (JWT cookie or Bearer token)
-- Called every 3 seconds by the frontend
+- Called every second by the frontend
 - Response time must be fast (< 100ms) — reads from memory, never hits disk
 
 ### 3.2 `/api/schedule`
@@ -142,7 +143,7 @@
 
 ## Phase 4 — Frontend Core
 
-**Goal:** The visual shell of the pit wall is in place. Dark theme, navigation, layout system, and the 3-second polling loop. No F1 data rendered yet beyond raw JSON.
+**Goal:** The visual shell of the pit wall is in place. Dark theme, navigation, layout system, and the polling loop. No F1 data rendered yet beyond raw JSON.
 
 ### 4.1 Design system (CSS)
 - `static/css/pitwall.css`
@@ -182,7 +183,7 @@
 
 ### 4.4 Polling loop (`static/js/poll.js`)
 ```javascript
-const POLL_INTERVAL = 3000;
+const POLL_INTERVAL = 1000;
 
 async function poll() {
     try {
@@ -204,7 +205,7 @@ poll();
 - Each page listens for `f1:update` event and updates its own DOM
 - Pages don't poll individually — one poll, all pages update
 
-**Phase 4 done when:** The pit wall shell loads, nav works, mode indicator shows REPLAY, session strip shows the circuit name, and the browser console shows the state JSON updating every 3 seconds.
+**Phase 4 done when:** The pit wall shell loads, nav works, mode indicator shows REPLAY, session strip shows the circuit name, and the browser console shows the state JSON updating every second.
 
 ---
 
@@ -257,7 +258,7 @@ poll();
 - Next event: countdown timer
 - Expand each event to show all session dates and times
 
-**Phase 5 done when:** All 5 pages load, show real replayed data, and update every 3 seconds without a page refresh.
+**Phase 5 done when:** All 5 pages load, show real replayed data, and update every second without a page refresh.
 
 ---
 
@@ -275,7 +276,6 @@ poll();
 - Outer circle (track outline)
 - Pit lane zone: small gap/notch at ~270° (bottom-left), labelled "PIT"
 - Sector boundary markers: S1/S2/S3 dividers as tick marks
-- DRS zone arcs: green arc segments (hardcoded per circuit, loaded from a circuit config JSON)
 - Start/finish line marker at 12 o'clock
 
 ### 6.3 Driver dots
@@ -399,44 +399,87 @@ poll();
 
 ---
 
-## Phase 9 — Live Race Test
+## Phase 9 — Timing Tower Enhancements
+
+**Goal:** The timing tower is richer and more interactive, surfacing gap comparisons, trends, and stint pace in a way that makes races more engaging to watch.
+
+### 9.1 Click-to-compare gaps
+- Click any driver row to pin that driver as the comparison reference
+- All other rows show their gap to the selected driver instead of gap to leader
+- Selected driver row highlighted
+- Click again or click elsewhere to deselect and return to normal gap display
+- Frontend only — no backend changes required
+
+### 9.2 Colour coding on gap movement
+- Each driver's gap and interval values colour coded based on trend:
+  - Green: gap closing vs previous update
+  - Red: gap growing vs previous update
+  - White: unchanged
+- Rolling comparison uses last 3 updates to avoid flicker
+- Frontend only — computed from successive poll responses
+
+### 9.3 Gap history sparklines
+- Tiny inline SVG chart per driver row showing gap trend over last 10 laps
+- Shows whether a driver is under pressure, pulling away, or stable
+- Requires small state dict addition: rolling `gap_history` array per driver (last 10 values)
+- Backend: replay engine appends to `gap_history` on each lap completion
+- Frontend: renders as a 40×16px SVG sparkline in the gap column
+
+### 9.4 Stint pace comparison
+- Average lap time per current stint shown as a small number in the tyre badge
+- Allows comparison of pace across different tyre ages and compounds
+- Backend: replay engine computes rolling stint average per driver
+- Frontend: displayed as secondary text inside the tyre badge
+
+### 9.5 Delta to fastest lap
+- Additional column showing each driver's gap to the overall fastest lap of the race
+- Already available in FastF1 data — display only
+- Shown as `+X.XXX` in a dedicated column, greyed out until lap 3+
+
+**Phase 9 done when:** All five enhancements are live on the timing tower and tested against a replay session.
+
+---
+
+## Phase 10 — Live Race Test
 
 **Goal:** Validate the full system during a real F1 race weekend.
 
-### 9.1 Pre-session checklist
+### 10.1 Pre-session checklist
 - Server started at least 30 minutes before session
 - Cloudflare tunnel confirmed active
 - FastF1 cache warmed for current season
 - `/api/health` returns healthy
 - Login tested from phone and laptop
 
-### 9.2 During session
+### 10.2 During session
 - Verify mode switches from REPLAY → LIVE automatically
 - Verify timing tower updates with real data
+- Verify all Phase 9 enhancements work with live data
 - Verify race control messages appear
 - Verify tyre data updates on pit stops
 - Verify circle map positions are plausible
 - Note any errors in server logs
 
-### 9.3 Post-session
+### 10.3 Post-session
 - Verify mode switches back to REPLAY automatically
 - Verify replay loads the just-completed session
-- Review SQLite timing_history for completeness
 - Document any issues
 
-### 9.4 Known risks
+### 10.4 Known risks
 - F1 live timing server outage (mitigated by SQLite recording)
 - SignalRClient disconnect mid-session (add reconnection logic in 7.1)
 - MacBook sleep interrupting server (mitigated by caffeinate in start script)
 - FastF1 post-session data delay (F1 doesn't release data instantly — may be 30–60 min after session)
 
+**Phase 10 done when:** A full race weekend completes without critical failures and timing data is accurate throughout.
+
 ---
 
-## Phase 10 — Polish
+## Phase 11 — Polish
 
 **Goal:** The app is solid, mobile-friendly, and handles edge cases gracefully.
 
-### 10.1 Mobile optimisation
+### 11.1 Mobile optimisation
 - Test all pages on iPhone and Android
 - Bottom nav usability
 - Timing tower horizontal scroll on narrow screens
@@ -444,7 +487,7 @@ poll();
 - Strategy page horizontal scroll
 - Font size tuning for small screens
 
-### 10.2 Edge cases
+### 11.2 Edge cases
 - Session with fewer than 20 drivers (partial grids)
 - Driver retirement (mark as DNF in timing tower, remove from circle map)
 - Red flag / session suspended state
@@ -452,22 +495,28 @@ poll();
 - Driver with no lap time yet (formation lap, first lap)
 - Missing FastF1 data for older sessions
 
-### 10.3 Performance
+### 11.3 Known issues (from TODO.md)
+- Settings page Save button layout bug
+- Sector-level yellow flag support
+- Per-circuit pit lane travel times
+- Lap counter not reaching `total_laps` at replay end
+
+### 11.4 Performance
 - Confirm `/api/state` responds in < 100ms under normal load
 - Profile replay engine tick for CPU usage on 2015 MacBook
 - Confirm FastF1 session load doesn't block the server (run in thread executor)
-- Monitor SQLite write performance during live session recording
 
-### 10.4 Logging
+### 11.5 Logging
 - Structured logging to file (mode changes, errors, session loads)
 - Log rotation (don't fill the SSD)
-- Error alerts: email or push notification if server crashes mid-race (optional)
 
-### 10.5 Documentation
+### 11.6 Documentation
 - Update README with setup instructions
 - Document how to add a new user
 - Document how to start the server
 - Document known limitations
+
+**Phase 11 done when:** All known bugs resolved, app tested on mobile, logs in place.
 
 ---
 
@@ -503,8 +552,9 @@ This is a solo project built in your own time. Phases are sequential — each bu
 | 6 — Circle map | 3–4 sessions |
 | 7 — Live timing | 2–3 sessions |
 | 8 — Deployment | 1–2 sessions |
-| 9 — Live race test | 1 race weekend |
-| 10 — Polish | Ongoing |
+| 9 — Timing tower enhancements | 2–3 sessions |
+| 10 — Live race test | 1 race weekend |
+| 11 — Polish | Ongoing |
 
 A "session" here means a focused work block of 1–3 hours.
 
