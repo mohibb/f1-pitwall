@@ -40,7 +40,7 @@ class ReplayEngine:
         self._max_time = max(
             (l["session_time"] for l in self.laps if l["session_time"]),
             default=7200.0,
-        )
+        ) + 120.0  # 2-minute buffer so all drivers complete their final lap before reset
 
         print(f"[replay] Ready: {self.circuit} {self.year}, "
               f"{len(self.laps)} laps, {len(self.driver_info)} drivers, "
@@ -96,6 +96,7 @@ class ReplayEngine:
         self._lap_times.clear()
         self._rc_emitted.clear()
         self._applied_laps.clear()
+        self._fastest_lap_secs = None
         update_state({"race_control": []})
 
     def _process_laps(self) -> None:
