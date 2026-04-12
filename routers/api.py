@@ -79,6 +79,74 @@ async def health():
     }
 
 
+@router.get("/admin/fetch-pit-duration")
+async def fetch_pit_duration(request: Request, current_user=Depends(require_admin)):
+    """Use Anthropic API with web search to find the pit lane loss time for the current round."""
+    import os
+    import anthropic
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    state = get_state()
+    session_info = state.get("session", {})
+    year = session_info.get("year")
+    round_number = session_info.get("round")
+    circuit = session_info.get("circuit")
+
+    if not year or not circuit:
+        raise HTTPException(status_code=400, detail="No active session found.")
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set in .env")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    prompt = (
+        f"Search for the Pirelli tyre strategy preview for the {year} F1 Grand Prix at {circuit}. "
+        f"Find the pit lane loss time in seconds. "
+        f"Return ONLY a JSON object like this, nothing else: "
+        f'{{"pit_loss_seconds": 24, "source": "brief source description"}}'
+    )
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=256,
+            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        # Extract text from response
+        result_text = ""
+        for block in response.content:
+            if hasattr(block, "text"):
+                result_text += block.text
+
+        # Parse JSON from response
+        import json
+        import re
+        match = re.search(r'\{.*?\}', result_text, re.DOTALL)
+        if not match:
+            raise HTTPException(status_code=500, detail=f"Could not parse response: {result_text}")
+
+        data = json.loads(match.group())
+        pit_loss = int(data.get("pit_loss_seconds", 0))
+        source = data.get("source", "Pirelli strategy notes")
+
+        if pit_loss < 10 or pit_loss > 60:
+            raise HTTPException(status_code=500, detail=f"Implausible value returned: {pit_loss}s. Check manually.")
+
+        return {
+            "estimated_pit_duration": pit_loss,
+            "source": source,
+            "note": f"From Pirelli strategy notes: {pit_loss}s pit lane loss ({source}). Adjust if needed."
+        }
+
+    except anthropic.APIError as e:
+        raise HTTPException(status_code=500, detail=f"Anthropic API error: {str(e)}")
+
+
 @router.get("/admin/calculate-pit-duration")
 async def calculate_pit_duration(request: Request, current_user=Depends(require_admin)):
     """Load FP1/FP2 for the current round and estimate pit lane travel time."""

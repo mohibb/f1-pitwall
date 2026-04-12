@@ -26,6 +26,7 @@
                     step="1"
                 >
                 <button class="seek-btn" type="button" id="calc-pit-btn">Calculate from practice</button>
+                <button class="seek-btn" type="button" id="fetch-pit-btn" style="margin-left:4px">Fetch from Pirelli</button>
                 <span id="calc-pit-status" class="seek-status"></span>
             </div>
         </div>
@@ -95,6 +96,33 @@
 </style>
 
 <script>
+const fetchPitBtn = document.getElementById('fetch-pit-btn');
+if (fetchPitBtn) {
+    fetchPitBtn.addEventListener('click', async () => {
+        const status = document.getElementById('calc-pit-status');
+        const input  = document.getElementById('pit_stop_duration');
+        fetchPitBtn.disabled = true;
+        status.textContent = 'Searching Pirelli notes...';
+        status.style.color = '#888';
+        try {
+            const res  = await fetch('/api/admin/fetch-pit-duration');
+            const data = await res.json();
+            if (res.ok) {
+                input.value = data.estimated_pit_duration;
+                status.textContent = data.note;
+                status.style.color = '#27ae60';
+            } else {
+                status.textContent = data.detail || 'Failed.';
+                status.style.color = '#e8002d';
+            }
+        } catch (e) {
+            status.textContent = 'Request failed.';
+            status.style.color = '#e8002d';
+        }
+        fetchPitBtn.disabled = false;
+    });
+}
+
 const calcPitBtn = document.getElementById('calc-pit-btn');
 if (calcPitBtn) {
     calcPitBtn.addEventListener('click', async () => {
