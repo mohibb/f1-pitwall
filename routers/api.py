@@ -103,10 +103,12 @@ async def fetch_pit_duration(request: Request, current_user=Depends(require_admi
     client = anthropic.Anthropic(api_key=api_key)
 
     prompt = (
-        f"Search for the Pirelli tyre strategy preview for the {year} F1 Grand Prix at {circuit}. "
-        f"Find the pit lane loss time in seconds. "
-        f"Return ONLY a JSON object like this, nothing else: "
-        f'{{"pit_loss_seconds": 24, "source": "brief source description"}}'
+        f'Search for exactly this: "F1 {circuit} {year} tyre strategy pit lane loss seconds". '
+        f"Do a single search, read the first relevant result, and extract the pit lane loss time in seconds. "
+        f"It is always written as a number followed by the word 'second' near the words 'pit lane loss'. "
+        f"Do not do more than one search. Do not verify. "
+        f"Return ONLY a JSON object, no other text: "
+        f'{{"pit_loss_seconds": 24, "source": "site name"}}'
     )
 
     try:
