@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 from datetime import datetime, timezone
@@ -8,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from auth import get_current_user, require_admin
 from state import get_state
-from fastf1_loader import extract_schedule
+from fastf1_loader import extract_schedule, get_completed_races
 
 router = APIRouter()
 
@@ -204,6 +205,34 @@ async def calculate_pit_duration(request: Request, current_user=Depends(require_
         "min_raw_pit_time": round(min_pit_time, 1),
         "note": f"Based on fastest pit stop in practice (raw: {min_pit_time:.1f}s). Adjust if needed."
     }
+
+
+@router.get("/admin/races")
+async def get_races_for_year(year: int, current_user=Depends(require_admin)):
+    current_year = datetime.now(timezone.utc).year
+    if year < current_year - 5 or year > current_year:
+        raise HTTPException(status_code=400, detail=f"Year must be between {current_year - 5} and {current_year}")
+    loop = asyncio.get_event_loop()
+    races = await loop.run_in_executor(None, get_completed_races, year)
+    return {"races": races}
+
+
+@router.post("/replay/load")
+async def load_replay_race(year: int, round: int, current_user=Depends(require_admin)):
+    if _session_manager is None:
+        raise HTTPException(status_code=503, detail="Session manager not ready")
+    state = get_state()
+    if state.get("mode") == "LIVE":
+        raise HTTPException(status_code=400, detail="Cannot switch race during a live session")
+    current_year = datetime.now(timezone.utc).year
+    if year < current_year - 5 or year > current_year:
+        raise HTTPException(status_code=400, detail=f"Year must be between {current_year - 5} and {current_year}")
+    if round < 1 or round > 30:
+        raise HTTPException(status_code=400, detail="Round must be between 1 and 30")
+    ok = _session_manager.load_race(year, round)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Cannot switch race during a live session")
+    return {"ok": True, "message": f"Loading {year} Round {round}…"}
 
 
 @router.post("/replay/seek")

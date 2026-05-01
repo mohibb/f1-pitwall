@@ -47,6 +47,35 @@ def get_last_completed_race() -> tuple[int, int] | None:
     return completed[-1]
 
 
+def get_completed_races(year: int) -> list[dict]:
+    now = datetime.now(timezone.utc)
+    try:
+        schedule = fastf1.get_event_schedule(year, include_testing=False)
+    except Exception as e:
+        print(f"[loader] Could not load {year} schedule: {e}")
+        return []
+
+    races = []
+    for _, event in schedule.iterrows():
+        try:
+            race_date = event["Session5DateUtc"]
+            if pd.isna(race_date):
+                continue
+            if race_date.tzinfo is None:
+                race_date = race_date.replace(tzinfo=timezone.utc)
+            if race_date < now:
+                races.append({
+                    "year":     year,
+                    "round":    int(event["RoundNumber"]),
+                    "name":     str(event["EventName"]),
+                    "country":  str(event["Country"]),
+                    "location": str(event["Location"]),
+                })
+        except Exception:
+            continue
+    return races
+
+
 def load_session(year: int, round_number: int, session_type: str = "R") -> fastf1.core.Session | None:
     try:
         session = fastf1.get_session(year, round_number, session_type)

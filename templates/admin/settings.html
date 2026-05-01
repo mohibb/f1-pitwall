@@ -60,6 +60,25 @@
             </div>
         </div>
 
+        <div class="setting-row" id="race-selector-section">
+            <label class="setting-label">
+                Load race
+                <span class="setting-hint">Switch the replay to any completed race. Not available during live sessions. App will briefly show IDLE while FastF1 fetches data.</span>
+            </label>
+            <div class="seek-row" style="flex-wrap:wrap;gap:8px">
+                <select class="setting-input" id="race-year-select" style="width:80px">
+                    {% for y in range(current_year, current_year - 4, -1) %}
+                    <option value="{{ y }}">{{ y }}</option>
+                    {% endfor %}
+                </select>
+                <select class="setting-input" id="race-round-select" style="width:260px">
+                    <option value="">— select race —</option>
+                </select>
+                <button class="seek-btn" type="button" id="load-race-btn" disabled>Load</button>
+                <span id="load-race-status" class="seek-status"></span>
+            </div>
+        </div>
+
         <div class="setting-save">
             <button class="admin-btn" type="submit">Save settings</button>
         </div>
@@ -181,5 +200,93 @@ if (seekBtn) {
         seekBtn.disabled = false;
     });
 }
+
+// --- Race selector ---
+(function () {
+    const yearSel  = document.getElementById('race-year-select');
+    const roundSel = document.getElementById('race-round-select');
+    const loadBtn  = document.getElementById('load-race-btn');
+    const status   = document.getElementById('load-race-status');
+
+    async function fetchRaces(year) {
+        roundSel.innerHTML = '<option value="">Loading…</option>';
+        loadBtn.disabled = true;
+        try {
+            const res  = await fetch(`/api/admin/races?year=${year}`);
+            const data = await res.json();
+            roundSel.innerHTML = '<option value="">— select race —</option>';
+            if (!res.ok) {
+                status.textContent = data.detail || 'Failed to load races.';
+                status.style.color = '#e8002d';
+                return;
+            }
+            (data.races || []).reverse().forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.round;
+                opt.textContent = `R${r.round} — ${r.name}`;
+                roundSel.appendChild(opt);
+            });
+        } catch {
+            roundSel.innerHTML = '<option value="">Request failed</option>';
+        }
+    }
+
+    yearSel.addEventListener('change', () => fetchRaces(yearSel.value));
+    roundSel.addEventListener('change', () => { loadBtn.disabled = !roundSel.value; });
+    fetchRaces(yearSel.value);
+
+    loadBtn.addEventListener('click', async () => {
+        const year  = yearSel.value;
+        const round = roundSel.value;
+        if (!round) return;
+        loadBtn.disabled = true;
+        status.textContent = 'Loading — watch the mode indicator…';
+        status.style.color = '#888';
+        try {
+            const res  = await fetch(`/api/replay/load?year=${year}&round=${round}`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                status.textContent = data.message;
+                status.style.color = '#27ae60';
+            } else {
+                status.textContent = data.detail || 'Failed.';
+                status.style.color = '#e8002d';
+                loadBtn.disabled = false;
+            }
+        } catch {
+            status.textContent = 'Request failed.';
+            status.style.color = '#e8002d';
+            loadBtn.disabled = false;
+        }
+    });
+
+    // Disable the whole section during LIVE mode; re-enable the button when REPLAY resumes
+    let wasIdle = false;
+    document.addEventListener('f1:update', (e) => {
+        const mode    = e.detail && e.detail.mode;
+        const section = document.getElementById('race-selector-section');
+        if (!section) return;
+        if (mode === 'LIVE') {
+            section.style.opacity = '0.4';
+            section.style.pointerEvents = 'none';
+            status.textContent = 'Not available during live sessions.';
+            status.style.color = '#888';
+        } else {
+            section.style.opacity = '';
+            section.style.pointerEvents = '';
+            if (status.textContent === 'Not available during live sessions.') {
+                status.textContent = '';
+            }
+        }
+        if (mode === 'IDLE') wasIdle = true;
+        if (mode === 'REPLAY' && wasIdle) {
+            wasIdle = false;
+            loadBtn.disabled = !roundSel.value;
+            if (status.style.color === 'rgb(39, 174, 96)') {
+                status.textContent = 'Race loaded successfully.';
+            }
+        }
+    });
+})();
 </script>
 {% endblock %}

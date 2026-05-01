@@ -145,6 +145,34 @@ class SessionManager:
             return False
         return self.engine.seek(lap_number)
 
+    def load_race(self, year: int, round_number: int) -> bool:
+        """Stop the current replay and start loading a different race in the background.
+        Returns False if a live session is active. Returns immediately — app goes IDLE
+        while FastF1 loads, then auto-transitions to REPLAY."""
+        if self.mode == "LIVE":
+            return False
+        threading.Thread(
+            target=self._load_race_bg,
+            args=(year, round_number),
+            daemon=True,
+            name="race-loader",
+        ).start()
+        return True
+
+    def _load_race_bg(self, year: int, round_number: int) -> None:
+        self._stop_replay()
+        update_state({"mode": "IDLE"})
+        self.mode = "IDLE"
+        print(f"[session] Loading {year} R{round_number} in background...")
+        session = load_session(year, round_number)
+        if session is None:
+            print(f"[session] Failed to load {year} R{round_number} — staying IDLE")
+            return
+        if self.mode == "LIVE":
+            print("[session] Live session started during race load — aborting replay")
+            return
+        self._start_replay(session)
+
     # ------------------------------------------------------------------
     # Internal: main run loop
     # ------------------------------------------------------------------
