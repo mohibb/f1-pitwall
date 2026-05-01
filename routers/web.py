@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -217,6 +218,7 @@ async def admin_settings(request: Request, current_user=Depends(require_admin)):
         "request": request,
         "user": current_user,
         "settings": settings,
+        "current_year": datetime.now(timezone.utc).year,
     })
 
 
@@ -234,4 +236,5 @@ async def admin_settings_save(
         "user": current_user,
         "settings": settings,
         "saved": True,
+        "current_year": datetime.now(timezone.utc).year,
     })
