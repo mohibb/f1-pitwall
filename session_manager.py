@@ -9,6 +9,7 @@ from fastf1_loader import enable_cache, get_last_completed_race, load_session
 from replay_engine import ReplayEngine
 from live_timing import LiveTimingClient
 from state import update_state, get_state
+from ml.predict import load_models, predict_prerace
 
 load_dotenv()
 
@@ -123,6 +124,7 @@ class SessionManager:
         self.engine: ReplayEngine | None = None
         self._schedule_cache: list[dict] = []
         self._schedule_fetched_at: datetime | None = None
+        self._last_live_session: dict | None = None
 
     # ------------------------------------------------------------------
     # Public interface
@@ -130,6 +132,7 @@ class SessionManager:
 
     def start(self):
         enable_cache(CACHE_DIR)
+        load_models()
         self._thread = threading.Thread(target=self._run, daemon=True, name="session-manager")
         self._thread.start()
         print("[session] Session manager started")
@@ -244,6 +247,7 @@ class SessionManager:
     # ------------------------------------------------------------------
 
     def _switch_to_live(self, session_info: dict):
+        self._last_live_session = session_info
         # Stop replay engine
         self._stop_replay()
 
@@ -277,8 +281,53 @@ class SessionManager:
         # Give FastF1 a moment to process the completed session
         time.sleep(30)
 
+        session_type = (self._last_live_session or {}).get("name", "")
+        session_round = (self._last_live_session or {}).get("round")
+        session_year = datetime.now(timezone.utc).year
+
+        if session_type == "Qualifying" and session_round:
+            threading.Thread(
+                target=self._run_prerace_predictions,
+                args=(session_year, session_round),
+                daemon=True,
+                name="ml-predict-prerace",
+            ).start()
+        elif session_type == "Race" and session_round:
+            threading.Thread(
+                target=self._run_training,
+                args=(session_year, session_round),
+                daemon=True,
+                name="ml-train",
+            ).start()
+
         # Load the just-completed session
         self._load_and_start_replay()
+
+    def _run_prerace_predictions(self, year: int, round_num: int) -> None:
+        print(f"[session] Running PRE-RACE predictions for {year} R{round_num}...")
+        try:
+            results = predict_prerace(year, round_num)
+            if results is None:
+                print("[session] PRE-RACE predictions unavailable (no model).")
+                return
+            from ml.predict import _prerace_bundle
+            low_conf = (_prerace_bundle or {}).get("low_confidence", False)
+            label = "PRE-RACE (LOW CONFIDENCE)" if low_conf else "PRE-RACE"
+            drivers_patch = {r["driver"]: {"predicted_finish": r["predicted_position"]} for r in results}
+            update_state({"session": {"prediction_model": label}, "drivers": drivers_patch})
+            print(f"[session] PRE-RACE predictions stored. Label: {label}")
+        except Exception as e:
+            print(f"[session] PRE-RACE prediction failed: {e}")
+
+    def _run_training(self, year: int, round_num: int) -> None:
+        print(f"[session] Triggering ML training after race {year} R{round_num}...")
+        try:
+            from ml.train import train_prerace, train_live
+            train_prerace(year, round_num + 1)
+            train_live(year, round_num + 1)
+            load_models()
+        except Exception as e:
+            print(f"[session] ML training failed: {e}")
 
     def _start_replay(self, session):
         self._replay_stop.clear()

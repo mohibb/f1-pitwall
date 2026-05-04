@@ -9,7 +9,7 @@ from fastf1_loader import (
     extract_weather,
 )
 from database import get_setting_sync
-from state import update_state
+from state import update_state, get_state
 
 
 class ReplayEngine:
@@ -42,6 +42,8 @@ class ReplayEngine:
             default=7200.0,
         ) + 120.0  # 2-minute buffer so all drivers complete their final lap before reset
 
+        self._last_predicted_lap: int | None = None
+
         print(f"[replay] Ready: {self.circuit} {self.year}, "
               f"{len(self.laps)} laps, {len(self.driver_info)} drivers, "
               f"max_time={self._max_time:.0f}s")
@@ -61,6 +63,7 @@ class ReplayEngine:
         self._process_weather()
         self._process_race_control()
         self._push_state()
+        self._maybe_predict_live()
 
     def run(self, stop_event) -> None:
         print("[replay] Starting replay loop")
@@ -102,6 +105,7 @@ class ReplayEngine:
         self._rc_emitted.clear()
         self._applied_laps.clear()
         self._fastest_lap_secs = None
+        self._last_predicted_lap = None
         update_state({"race_control": []})
 
     def _process_laps(self) -> None:
@@ -406,6 +410,27 @@ class ReplayEngine:
             elif lap["session_time"] > self.simulated_time:
                 break
         return result
+
+    def _maybe_predict_live(self) -> None:
+        current_lap = max(
+            (ds["lap_number"] for ds in self._driver_state.values() if ds["lap_number"]),
+            default=None,
+        )
+        if current_lap is None or current_lap < 5:
+            return
+        if current_lap == self._last_predicted_lap:
+            return
+        self._last_predicted_lap = current_lap
+        try:
+            from ml.predict import predict_live
+            state = get_state()
+            results = predict_live(state)
+            if results is None:
+                return
+            drivers_patch = {r["driver"]: {"predicted_finish": r["predicted_position"]} for r in results}
+            update_state({"session": {"prediction_model": "LIVE"}, "drivers": drivers_patch})
+        except Exception as e:
+            print(f"[replay] Live prediction failed: {e}")
 
     def _blank_driver(self, abbreviation: str) -> dict:
         info = self.driver_info.get(abbreviation, {})
