@@ -30,6 +30,10 @@ def load_models() -> None:
         print("[ml.predict] No LIVE model — live predictions disabled.")
 
 
+def is_low_confidence() -> bool:
+    return bool((_prerace_bundle or {}).get("low_confidence", False))
+
+
 def predict_prerace(year: int, round_num: int) -> Optional[list[dict]]:
     if _prerace_bundle is None:
         return None
@@ -55,6 +59,7 @@ def _infer(bundle: dict, df: pd.DataFrame) -> Optional[list[dict]]:
     model = bundle["model"]
     feature_cols = bundle["feature_cols"]
     team_map = bundle["team_map"]
+    medians = bundle.get("feature_medians", {})
 
     df = df.copy()
     if "team" in df.columns:
@@ -64,8 +69,7 @@ def _infer(bundle: dict, df: pd.DataFrame) -> Optional[list[dict]]:
         if col not in df.columns:
             df[col] = float("nan")
 
-    X = df[feature_cols]
-    X = X.fillna(X.median(numeric_only=True))
+    X = df[feature_cols].fillna(value=medians)
 
     scores = model.predict(X.values.astype(float))
     results = [{"driver": abbr, "_s": float(s)}

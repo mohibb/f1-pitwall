@@ -9,7 +9,7 @@ from fastf1_loader import enable_cache, get_last_completed_race, load_session
 from replay_engine import ReplayEngine
 from live_timing import LiveTimingClient
 from state import update_state, get_state
-from ml.predict import load_models, predict_prerace
+from ml.predict import load_models, predict_prerace, is_low_confidence
 
 load_dotenv()
 
@@ -310,9 +310,7 @@ class SessionManager:
             if results is None:
                 print("[session] PRE-RACE predictions unavailable (no model).")
                 return
-            from ml.predict import _prerace_bundle
-            low_conf = (_prerace_bundle or {}).get("low_confidence", False)
-            label = "PRE-RACE (LOW CONFIDENCE)" if low_conf else "PRE-RACE"
+            label = "PRE-RACE (LOW CONFIDENCE)" if is_low_confidence() else "PRE-RACE"
             drivers_patch = {r["driver"]: {"predicted_finish": r["predicted_position"]} for r in results}
             update_state({"session": {"prediction_model": label}, "drivers": drivers_patch})
             print(f"[session] PRE-RACE predictions stored. Label: {label}")
@@ -321,13 +319,19 @@ class SessionManager:
 
     def _run_training(self, year: int, round_num: int) -> None:
         print(f"[session] Triggering ML training after race {year} R{round_num}...")
-        try:
-            from ml.train import train_prerace, train_live
-            train_prerace(year, round_num + 1)
-            train_live(year, round_num + 1)
-            load_models()
-        except Exception as e:
-            print(f"[session] ML training failed: {e}")
+        from ml.train import train_prerace, train_live
+
+        def safe(fn, *args):
+            try:
+                fn(*args)
+            except Exception as e:
+                print(f"[session] {fn.__name__} failed: {e}")
+
+        t1 = threading.Thread(target=safe, args=(train_prerace, year, round_num + 1), daemon=True)
+        t2 = threading.Thread(target=safe, args=(train_live, year, round_num + 1), daemon=True)
+        t1.start(); t2.start()
+        t1.join(); t2.join()
+        load_models()
 
     def _start_replay(self, session):
         self._replay_stop.clear()

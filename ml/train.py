@@ -2,6 +2,7 @@ import json
 import os
 import pickle
 import sys
+import threading
 from pathlib import Path
 
 import fastf1
@@ -11,9 +12,8 @@ from xgboost import XGBRegressor
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from ml.features import (
-    _load_session_safe, _race_results, _season_results_before,
+    _load_session_safe, _race_results,
     extract_prerace_features, extract_live_features,
-    _SEASON_LOOKBACK,
 )
 
 _ML_DIR = Path(__file__).parent
@@ -74,6 +74,44 @@ def _save_feature_cols(key: str, cols: list) -> None:
         json.dump(data, f, indent=2)
 
 
+def _fit_and_save(
+    dfs: list,
+    weights: list,
+    path: Path,
+    key: str,
+    extra_bundle: dict | None = None,
+    **model_kwargs,
+) -> None:
+    if not dfs:
+        print(f"[ml.train] No training data for {key}.")
+        return
+    dfs, team_map = _encode_teams(dfs)
+    combined = pd.concat(dfs, ignore_index=True)
+    feature_cols = [c for c in combined.columns if c not in ("driver", "final_position")]
+    X = combined[feature_cols]
+    medians = X.median(numeric_only=True).to_dict()
+    X = X.fillna(medians)
+    y = combined["final_position"].values
+
+    model = XGBRegressor(**model_kwargs)
+    model.fit(X, y, sample_weight=np.array(weights))
+
+    bundle = {
+        "model": model,
+        "feature_cols": feature_cols,
+        "team_map": team_map,
+        "feature_medians": medians,
+    }
+    if extra_bundle:
+        bundle.update(extra_bundle)
+    with open(path, "wb") as f:
+        pickle.dump(bundle, f)
+    _save_feature_cols(key, feature_cols)
+
+    top = sorted(zip(feature_cols, model.feature_importances_), key=lambda x: -x[1])[:5]
+    print(f"[ml.train] {key} model saved. Top features: {top}")
+
+
 def train_prerace(current_year: int, current_round: int) -> None:
     races = _training_races(current_year, current_round)
     n_current = sum(1 for yr, _ in races if yr == current_year)
@@ -90,30 +128,12 @@ def train_prerace(current_year: int, current_round: int) -> None:
         dfs.append(df)
         weights.extend([_weight(year, current_year)] * len(df))
 
-    if not dfs:
-        print("[ml.train] No pre-race training data available.")
-        return
-
-    dfs, team_map = _encode_teams(dfs)
-    combined = pd.concat(dfs, ignore_index=True)
-    feature_cols = [c for c in combined.columns if c not in ("driver", "final_position")]
-    X = combined[feature_cols]
-    X = X.fillna(X.median(numeric_only=True))
-    y = combined["final_position"].values
-
-    model = XGBRegressor(
+    _fit_and_save(
+        dfs, weights, _PRERACE_MODEL, "prerace",
+        extra_bundle={"low_confidence": low_confidence},
         n_estimators=200, max_depth=4, learning_rate=0.05,
         subsample=0.8, colsample_bytree=0.8, random_state=42,
     )
-    model.fit(X, y, sample_weight=np.array(weights))
-
-    with open(_PRERACE_MODEL, "wb") as f:
-        pickle.dump({"model": model, "feature_cols": feature_cols,
-                     "team_map": team_map, "low_confidence": low_confidence}, f)
-    _save_feature_cols("prerace", feature_cols)
-
-    top = sorted(zip(feature_cols, model.feature_importances_), key=lambda x: -x[1])[:5]
-    print(f"[ml.train] PRE-RACE model saved. Top features: {top}")
     print(f"[ml.train] Low confidence: {low_confidence} ({n_current} current-season races)")
 
 
@@ -144,29 +164,11 @@ def train_live(current_year: int, current_round: int) -> None:
             dfs.append(df)
             weights.extend([_weight(year, current_year)] * len(df))
 
-    if not dfs:
-        print("[ml.train] No live training data available.")
-        return
-
-    dfs, team_map = _encode_teams(dfs)
-    combined = pd.concat(dfs, ignore_index=True)
-    feature_cols = [c for c in combined.columns if c not in ("driver", "final_position")]
-    X = combined[feature_cols]
-    X = X.fillna(X.median(numeric_only=True))
-    y = combined["final_position"].values
-
-    model = XGBRegressor(
+    _fit_and_save(
+        dfs, weights, _LIVE_MODEL, "live",
         n_estimators=200, max_depth=5, learning_rate=0.05,
         subsample=0.8, colsample_bytree=0.8, random_state=42,
     )
-    model.fit(X, y, sample_weight=np.array(weights))
-
-    with open(_LIVE_MODEL, "wb") as f:
-        pickle.dump({"model": model, "feature_cols": feature_cols, "team_map": team_map}, f)
-    _save_feature_cols("live", feature_cols)
-
-    top = sorted(zip(feature_cols, model.feature_importances_), key=lambda x: -x[1])[:5]
-    print(f"[ml.train] LIVE model saved. Top features: {top}")
 
 
 def _lap_snapshot(race, lap_n: int, total_laps: int) -> dict | None:
@@ -212,14 +214,15 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    # Import here to avoid circular import issues when run as script
-    import importlib, sys as _sys
-    _sys.path.insert(0, str(Path(__file__).parent.parent))
+    import importlib
     fastf1_loader = importlib.import_module("fastf1_loader")
     fastf1_loader.enable_cache(os.getenv("CACHE_DIR", "f1_cache"))
 
     year = int(sys.argv[1]) if len(sys.argv) > 1 else 2025
     rnd = int(sys.argv[2]) if len(sys.argv) > 2 else 5
     print(f"Training models using data before {year} R{rnd}...")
-    train_prerace(year, rnd)
-    train_live(year, rnd)
+
+    t1 = threading.Thread(target=train_prerace, args=(year, rnd))
+    t2 = threading.Thread(target=train_live, args=(year, rnd))
+    t1.start(); t2.start()
+    t1.join(); t2.join()

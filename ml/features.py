@@ -1,6 +1,8 @@
 import fastf1
 import pandas as pd
 
+from fastf1_loader import load_session as _load_session
+
 _TRACK_STATUS_MAP = {"1": 1, "2": 2, "4": 3, "6": 4, "7": 5}
 _DNF_POSITION = 21
 _LONG_RUN_MIN_LAPS = 5
@@ -12,13 +14,7 @@ _POINTS_MAP = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
 
 
 def _load_session_safe(year: int, round_num: int, session_type: str):
-    try:
-        s = fastf1.get_session(year, round_num, session_type)
-        s.load(laps=True, telemetry=False, weather=False, messages=False)
-        return s
-    except Exception as e:
-        print(f"[ml.features] Could not load {year} R{round_num} {session_type}: {e}")
-        return None
+    return _load_session(year, round_num, session_type, weather=False, messages=False)
 
 
 def _fp2_long_run_pace(fp2_session) -> dict[str, float]:
@@ -205,19 +201,18 @@ def extract_live_features(state: dict, lap_n: int):
     return pd.DataFrame(rows) if rows else None
 
 
-def _parse_gap(val) -> float:
-    if val is None or val == "" or val in ("leader", "—"):
+def _parse_float(val, extra_nan=()) -> float:
+    if val is None or val == "" or val in extra_nan:
         return float("nan")
     try:
         return float(str(val).replace("+", "").strip())
     except (ValueError, TypeError):
         return float("nan")
+
+
+def _parse_gap(val) -> float:
+    return _parse_float(val, extra_nan=("leader", "—"))
 
 
 def _parse_delta(val) -> float:
-    if val is None or val == "":
-        return float("nan")
-    try:
-        return float(str(val).replace("+", "").strip())
-    except (ValueError, TypeError):
-        return float("nan")
+    return _parse_float(val)

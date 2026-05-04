@@ -9,7 +9,7 @@ from fastf1_loader import (
     extract_weather,
 )
 from database import get_setting_sync
-from state import update_state, get_state
+from state import update_state
 
 
 class ReplayEngine:
@@ -62,8 +62,8 @@ class ReplayEngine:
         self._process_laps()
         self._process_weather()
         self._process_race_control()
-        self._push_state()
-        self._maybe_predict_live()
+        current_lap = self._push_state()
+        self._maybe_predict_live(current_lap)
 
     def run(self, stop_event) -> None:
         print("[replay] Starting replay loop")
@@ -342,6 +342,7 @@ class ReplayEngine:
             },
             "drivers": drivers_patch,
         })
+        return current_lap
 
     def _compute_gaps(self, ds: dict, positions: list, leader_lap_time: float | None) -> tuple[str, str]:
         if not positions:
@@ -411,11 +412,7 @@ class ReplayEngine:
                 break
         return result
 
-    def _maybe_predict_live(self) -> None:
-        current_lap = max(
-            (ds["lap_number"] for ds in self._driver_state.values() if ds["lap_number"]),
-            default=None,
-        )
+    def _maybe_predict_live(self, current_lap: int | None) -> None:
         if current_lap is None or current_lap < 5:
             return
         if current_lap == self._last_predicted_lap:
@@ -423,7 +420,14 @@ class ReplayEngine:
         self._last_predicted_lap = current_lap
         try:
             from ml.predict import predict_live
-            state = get_state()
+            track_status = next(
+                (ds.get("track_status", "1") for ds in self._driver_state.values()), "1"
+            )
+            state = {
+                "session": {"current_lap": current_lap, "total_laps": self.total_laps},
+                "drivers": dict(self._driver_state),
+                "track_status": track_status,
+            }
             results = predict_live(state)
             if results is None:
                 return
